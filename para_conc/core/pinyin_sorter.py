@@ -1,55 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
-# Disclaimer:
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 # this file is cited from the __init__ file of xpinyin for the purpose of chinese words sorting only
 # with a slight modification on its os.path on line. 47, whose original contents are:
 # data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 #                              'Mandarin.dat')
 
-# ----------------------------------------------------------------------------------------------
-# MIT License
-
-# Copyright (c) 2010 - 2013 Richard Huang (flyerhzm@gmail.com)
-
-# Permission is hereby granted, free of charge, to any person obtaining
-# a copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-# The MIT License applies to this file only.
-# ----------------------------------------------------------------------------------------------
-
 from __future__ import unicode_literals
-
 import os.path
 import re
 
@@ -61,18 +17,14 @@ PinyinToneMark = {
     4: u"\u00e0\u00f2\u00e8\u00ec\u00f9\u01dc\u01dc",
 }
 
-
 class Pinyin(object):
-
     data_path = os.path.join(os.getcwd(),'app_data','workfiles','Mandarin.dat')
-
     def __init__(self, data_path=data_path):
         self.dict = {}
         with open(data_path) as f:
             for line in f:
                 k, v = line.split('\t')
                 self.dict[k] = v
-
     @staticmethod
     def decode_pinyin(s):
         s = s.lower()
