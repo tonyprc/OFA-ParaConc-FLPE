@@ -16,10 +16,10 @@ from para_conc.core.lg_dict import LG_DICT
 
 class CulWindow(QMainWindow):
     update_pbar = Signal([int, int])
-    get_corpus = Signal(str)
     def __init__(self, parent=None):
         super(CulWindow, self).__init__(parent)
         self.setWindowTitle('内容提取')
+        #self.setGeometry(400, 100, 500, 300)
         self.setFixedSize(500, 400)
         currentDir = os.getcwd()
         self.setWindowIcon(QIcon(currentDir + "/app_data/images/vquote.png"))
@@ -53,6 +53,7 @@ class CulWindow(QMainWindow):
         self._header_label.setFixedHeight(80)
         self._header_label.setStyleSheet("QLabel{border-image: url(./app_data/images/quote_title.png);}")
         
+
         self._corp_title = QLabel("当前语料中文标题:")
         self._corp_title_box = QLineEdit()
         self._corp_title_box.setReadOnly(True)
@@ -118,9 +119,10 @@ class CulWindow(QMainWindow):
         self.result = m
         self.error = n
         if self.result:
-            self._current_elem_text = self.result.replace("\n\n",'\n')
+            self._current_elem_text = self.result.replace("\n\n",'\n') 
             self._quote_window.clear()
             self._quote_window.setText(self._current_elem_text)
+            self._current_file_id = self._corp_title_box.text().replace(" ","").replace("\n","")  
         else:
             if self.error:
                 self.set_status_text(f"抱歉，其他思政元素提取失败，错误代码：{self.error}")
@@ -147,9 +149,9 @@ class CulWindow(QMainWindow):
                     break
         else:
             with open(self.dict_file, mode="rt", encoding = "utf-8-sig") as f:
-                self.prompt_list.clear()          
+                self.prompt_list.clear()           
                 self.current_dict = json.load(f)  
-                self.quotes = {}                 
+                self.quotes = {}                   
                 for key, y in self.current_dict.items():                    
                     kwds = []
                     item = y['quote'].strip()
@@ -170,7 +172,7 @@ class CulWindow(QMainWindow):
         self._quote_window.clear()
         self._current_elem_html = ""
         self._current_elem_text = ""
-        self.get_corpus.emit('get_corpus')
+        current_corpus = ""
         if self._current_corpus:
             if self._current_corpus[1]:
                 current_corpus = self._current_corpus[1]
@@ -214,8 +216,7 @@ class CulWindow(QMainWindow):
                                 if i not in result_dict[pair_found]['index']:
                                     result_dict[pair_found]['index'].append(i)
                                 if rpl_wrds not in result_dict[pair_found]['terms']:
-                                    result_dict[pair_found]['terms'].extend(rpl_wrds)                                   
-
+                                    result_dict[pair_found]['terms'].extend(rpl_wrds) 
                 if result_dict:
                     result_list = []
                     final_quote_num = 0                    
@@ -270,9 +271,9 @@ class CulWindow(QMainWindow):
 
     def get_elem_data(self):
         self._quote_window.clear()
+        self._current_file_id = self._corp_title_box.text().replace(" ","").replace("\n","")
         self._current_elem_html = ""
         self._current_elem_text = ""
-        self.get_corpus.emit('get_corpus')
         if self._current_corpus:
             if self._current_corpus[1]:
                 current_corpus = self._current_corpus[1]
@@ -281,7 +282,7 @@ class CulWindow(QMainWindow):
         else:
             current_corpus = ""
         if current_corpus:            
-            question_stem = "你是一个思政元素提取专家，你的任务是从以下文本中为用户提供专业、准确的思政元素，回复时请用中文：\n"            
+            question_stem = "你是一个思政元素提取专家，你的任务是从以下文本中为用户提供专业、准确的思政元素，回复时请用中文：\n"
             element_request = question_stem + current_corpus.raw_text_zh
             self.thread_run(element_request, self.lgd)            
         else:
@@ -322,7 +323,7 @@ class CulWindow(QMainWindow):
             self.set_status_text("文件已保存！")
             
     def set_status_text(self, text):
-        self._statusBar.showMessage(text, 3000) 
+        self._statusBar.showMessage(text, 50000) 
 
 class CulDictWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -391,7 +392,7 @@ class CulDictWindow(QMainWindow):
         self._category_box.setFixedWidth(max_width)
 
         self._body_layout = QHBoxLayout()
-
+         
         self._setting_frame_layout.addWidget(self._id_label, 0, 0)
         self._setting_frame_layout.addWidget(self._id_box, 0, 1)
         self._setting_frame_layout.addWidget(self._quote_label, 0, 2)
@@ -598,4 +599,4 @@ class CulDictWindow(QMainWindow):
             self.set_status_text("文件已保存！")
             
     def set_status_text(self, text):
-        self._statusBar.showMessage(text, 3000)  
+        self._statusBar.showMessage(text, 3000) 
