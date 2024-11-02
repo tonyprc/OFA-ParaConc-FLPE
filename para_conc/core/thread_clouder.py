@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# Thread for word cloud drawing
 # Copyright (c) 2024 Tony Chang (42716403@qq.com)
 
 import os, sys, json, re, time, copy, codecs, pickle
@@ -12,7 +13,6 @@ class CloudThread(QThread):
     obj_signal = Signal(dict)
     pbar_signal = Signal([int, int]) 
     msg_m_signal = Signal(str)
-    output_window_signal = Signal([str, str, str])
     def __init__(self, opt, stp_zh, stp_en, zh_dict, en_dict): 
         super(CloudThread, self).__init__()
         currentDir = os.getcwd()
@@ -24,20 +24,20 @@ class CloudThread(QThread):
         self.font_path = os.path.join(fontDir, "simhei.ttf")
         self._outPutDir = os.path.join(currentDir, "saved_files")
 
-        self._img_carrier = {}            
+        self._img_carrier = {}                 
         self.msg = ""
-        self.stop_zh = stp_zh                
+        self.stop_zh = stp_zh                  
         self.stop_en = stp_en 
         self.stop_bi = stp_zh + stp_en        
-        self.lang = opt['lang']              
-        self.stop_tags = opt['tag']                               
+        self.lang = opt['lang']                
+        self.stop_tags = opt['tag']                                      
         self.stop_switch = opt['stop_list']
-        self.stop_words = []          
+        self.stop_words = []                    
         self.wtf_dict = {}
         
         if self.lang == "zh":
             if self.stop_switch == 'on':            
-                self.stop_words = self.stop_zh 
+                self.stop_words = self.stop_zh  
             self.wtf_dict = zh_dict
         elif self.lang == "en":
             if self.stop_switch == 'on':
@@ -74,34 +74,40 @@ class CloudThread(QThread):
                 voc_dict[w]=q
         if self.color_func == None:
             cloud = WordCloud(            
-                font_path=self.font_path,        
-                background_color=self.color_bg, 
+                font_path=self.font_path,                  
+                background_color=self.color_bg,  
+                # width = 400,
+                # height = 200,
                 color_func = None,
-                mask=self.color_mask,                           
-                max_words=self.word_max,                         
-                max_font_size=self.font_max,                        
-                min_font_size=self.font_min,                    
-                random_state=self.color_random,                  
-                stopwords=None,                 
-                mode=self.color_mode,    
+                mask=self.color_mask,                        
+                max_words=self.word_max,                     
+                max_font_size=self.font_max,               
+                min_font_size=self.font_min,                 
+                random_state=self.color_random,              
+                stopwords=None,                              
+                mode=self.color_mode,             
                 )
         else:
             cloud = WordCloud(            
-                font_path=self.font_path,           
-                background_color=self.color_bg, 
-                color_func = lambda *args, **kwargs: self.color_func, 
-                mask=self.color_mask,                           
-                max_words=self.word_max,                          
-                max_font_size=self.font_max,                        
-                min_font_size=self.font_min,                          
-                random_state=self.color_random,                    
-                stopwords=None,          
-                mode=self.color_mode,    
-                )        
-        word_cloud = cloud.generate_from_frequencies(voc_dict)
-        current_img_carrier = {}
-        current_img_carrier["word_cloud"]=word_cloud
-        msg= f"词云图已生成!"
+                font_path=self.font_path,                     
+                background_color=self.color_bg,   
+                color_func = lambda *args, **kwargs: self.color_func,    
+                mask=self.color_mask,                       
+                max_words=self.word_max,                      
+                max_font_size=self.font_max,                
+                min_font_size=self.font_min,                  
+                random_state=self.color_random,              
+                stopwords=None,                               
+                mode=self.color_mode,            
+                )
+        try:
+            word_cloud = cloud.generate_from_frequencies(voc_dict)
+            current_img_carrier = {}
+            current_img_carrier["word_cloud"]=word_cloud
+            msg= (f"词云图已生成!","")
+        except:
+            current_img_carrier = {}
+            msg= ("",f"当前语料最高词频为1，词云图生成失败!")
         return current_img_carrier, msg
 
         
@@ -116,7 +122,7 @@ class CloudThread(QThread):
         time.sleep(2)
         self.pbar_signal.emit(2,3)
         self.current_img_carrier, self.msg = self.draw_cloud()
-        if self.msg:
+        if self.msg[0]:
             self.pbar_signal.emit(3,3)
             T2 = time.perf_counter()
             time_used = T2 - T1
@@ -128,6 +134,7 @@ class CloudThread(QThread):
             T2 = time.perf_counter()
             time_used = T2 - T1
             self.pbar_signal.emit(10,10)
-            self.msg_m_signal.emit(f"词云绘制失败，请重试，本次共用时{time_used:.2f}秒")
+            self.msg_m_signal.emit(self.msg[1])
             time.sleep(1)
+            self.pbar_signal.emit(-1,3)
             self.pbar_signal.emit(-1,3)
