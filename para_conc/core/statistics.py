@@ -8,14 +8,13 @@ from para_conc.core.amb_tank import AMB_TANK, AMB_LIST
 from para_conc.core.lemma_pos_map import LEMMA_POS_MAP, CAP_MAP, CHAR_FILTER
 
 class Statistics:
-    
     def __init__(self): 
         self.warning = []
         self.acronym_checklist = CAP_MAP["ACRONYM"]
         self.nnp_checklist = CAP_MAP["TITLE"]
         self.lower_checklist = CAP_MAP["SMALL"]
         self.char_strs = CHAR_FILTER
-    
+
     def count_bytes(self, text_zh, text_en):        
         return len(self.remove_added_marker(text_zh, "zh")),len(self.remove_added_marker(text_en, "en"))
           
@@ -25,17 +24,18 @@ class Statistics:
             text = re.sub(r"\|(/w|/xn) ", "", text) 
             text = re.sub(r"\[TI\]/xm ", "", text) 
             text = re.sub(r"\[SU\]/xm ", "", text) 
-            text = re.sub(r"\[AU\]/xm ", "", text) 
+            text = re.sub(r"\[AU\]/xm ", "", text)          
             text = re.sub(r"\[DT\]/xm ", "", text) 
             text = re.sub(r"\[LO\]/xm ", "", text) 
-            text = re.sub(r"\[(VL|ED)\]/xm ", "", text) 
+            text = re.sub(r"\[(VL|ED)\]/xm ", "", text)
             text = re.sub(r"\[CT\]/xm ", "", text) 
             text = re.sub(r"\[CH\]/xm ", "", text) 
             text = re.sub(r"\[SC\]/xm ", "", text) 
             text = re.sub(r"\[PU\]/xm ", "", text) 
             text = re.sub(r"\[NT\]/xm ", "", text) 
             text = re.sub(r"\[AX\]/xm ", "", text) 
-            text = re.sub(r"\[P.*?\]/xm ", "", text)
+            text = re.sub(r"\[P.*?\]/xm ", "", text) 
+            #text = re.sub(r"〔/wkz [a-z]/\w+ 〕/wky", "*/w", text)
             text = re.sub(r"〔/wkz (无/\w+|照片/\w+) 〕/wky\n*","", text) 
             text = re.sub(r"〔(无/\w+|照片/\w+)〕/xw\n*","", text) 
         if lang == "en":
@@ -54,29 +54,29 @@ class Statistics:
             text = re.sub(r"\[NT\]_XM ", "", text)
             text = re.sub(r"\[CH\]_XM ", "", text) 
             text = re.sub(r"\[P.*?\]_XM ", "", text) 
-            text = re.sub(r"\[_\[ P.*?\]_\] ", "", text) 
+            text = re.sub(r"\[_\[ P.*?\]_\] ", "", text)       
             text = re.sub(r"\[_\[ (UnTr_\w+|PHOTOS_\w+) ]_]\n*","", text) 
             text = re.sub(r"\[(UnTr_\w+|PHOTOS_\w+)]_XW\n*","", text) 
         return text
 
-    def generate_word_tag_list(self, tagged_text, file_id, lang = "zh"):        
+    def generate_word_tag_list(self, tagged_text, lang = "zh"):        
         clean_text = self.remove_added_marker(tagged_text, lang) 
         char_regex = r'[一二三四五六七八九十百千万亿兆]'
         token_tag_list = []
         word_tag_list = []
-        if lang == "zh":
+        if lang == "zh":         
             para_list = [x.strip() for x in clean_text.split("\n") if x.strip()]
             for para in para_list:                
                 word_tags = [y for y in para.split()]
                 for word_tag in word_tags:
                     if word_tag.startswith("//"):  
                         token_tag_list.append(('/',word_tag.split("/")[-1])) 
-                    elif word_tag.startswith("/"):  
+                    elif word_tag.startswith("/"): 
                         token_tag_list.append(('[空格]',"None")) 
-                    elif "/" in word_tag:         
+                    elif "/" in word_tag:       
                         words = [x for x in word_tag.split("/") if x.strip()]
-                        if len(words) == 1:       
-                            msg = f"ZH WdTgSplit ERROR in {file_id} => {word_tag}\n"
+                        if len(words) == 1:      
+                            msg = f"ZH WdTgSplit ERROR  => {word_tag}\n"
                             if msg not in self.warning:
                                 self.warning.append(msg)
                         else: 
@@ -84,15 +84,15 @@ class Statistics:
                                 w = words[0]  
                                 t = words[1]  
                             else:             
-                                w = "/".join(words[:-1])   
-                                t = words[-1]              
+                                w = "/".join(words[:-1])  
+                                t = words[-1]             
                             if t.startswith('w'):
                                 token_tag_list.append((w, t)) 
                             elif t.startswith("xu"):
                                 token_tag_list.append((w, t)) 
                             elif t in ["xm", 'xn', "xw"]:
                                 pass 
-                            elif w in '&‘’“”（）—；。，%‰℃□■$
+                            elif w in '&‘’“”（）—；。，%‰℃□■$#"*+-@•…':
                                 token_tag_list.append((w,t))  
                             elif t == "m":
                                 char_test = re.search(char_regex, w)
@@ -105,7 +105,7 @@ class Statistics:
                                 token_tag_list.append((w, t))
                                 word_tag_list.append((w, t))
                     else: 
-                        msg = f"ZH TagMissing ERROR in {file_id}=> {word_tag}\n"
+                        msg = f"ZH TagMissing ERROR => {word_tag}\n"
                         if msg not in self.warning:
                             self.warning.append(msg)
             if token_tag_list and word_tag_list:
@@ -119,7 +119,7 @@ class Statistics:
                 word_tags = [y for y in para.split()]
                 for word_tag in word_tags:
                     if word_tag.startswith("_"): 
-                        token_tag_list.append(('[空格]',word_tag.replace("_","")))  
+                        token_tag_list.append(('[空格]',word_tag.replace("_",""))) 
                     elif "_" in word_tag: 
                         words = [x for x in word_tag.split("_") if x.strip()]
                         if len(words) > 1:
@@ -128,36 +128,36 @@ class Statistics:
                             if t == "None":
                                 token_tag_list.append((w,t))  
                             elif t[0] in '[]:?;,.`/()':
-                                token_tag_list.append((w,t))  
+                                token_tag_list.append((w,t)) 
                             elif w.isnumeric():
                                 token_tag_list.append((w,t))  
                             elif t == "SYM":
                                 token_tag_list.append((w,t))  
-                            elif w in '=&‘’“”（）—；。，%‰□■$
+                            elif w in '=&‘’“”（）—；。，%‰□■$#"*+-@•…':
                                 token_tag_list.append((w,t))  
                             else:
                                 token_tag_list.append((w, t))
                                 word_tag_list.append((w, t))
                         else:
                             if word_tag.lstrip().rstrip().startswith("_"):
-                                token_tag_list.append(('[空格]',word_tag.replace("_","").strip()))  
+                                token_tag_list.append(('[空格]',word_tag.replace("_","").strip())) 
                             else:
-                                msg = f"EN TAG ERROR in {file_id} => {word_tag} => tg is missing\n"
+                                msg = f"EN TAG ERROR  => {word_tag} => tg is missing\n"
                                 if msg not in self.warning:
                                     self.warning.append(msg) 
                     else:
-                        msg = f"EN NoTag Marker ERROR in {file_id} => {word_tag} => _ is missing\n"
+                        msg = f"EN NoTag Marker ERROR  => {word_tag} => _ is missing\n"
                         if msg not in self.warning:
-                            self.warning.append(msg)
+                            self.warning.append(msg) 
             if token_tag_list and word_tag_list:
                 word_token_count = len(word_tag_list)
-                return token_tag_list, word_tag_list, word_token_count
+                return token_tag_list, word_tag_list, word_token_count      
  
     def count_zh_sttr (self, token_list):
-        token_count = len(token_list)  
-        type_count = len(set([word for (word, tag) in token_list]))  
+        token_count = len(token_list) 
+        type_count = len(set([word for (word, tag) in token_list]))    
         try:
-            ttr = type_count/token_count 
+            ttr = type_count/token_count
         except:
             self.warning.append("critical zero error occurred!")
         if len(token_list) < 1000:
@@ -195,8 +195,9 @@ class Statistics:
                 tt += t_type/t_token
             en_word_sttr = tt/tn
         return word_type_count, en_word_ttr, en_word_sttr
-    
-    def count_freq(self, token_tag_list, word_tag_list, text_title, lang="zh"):
+       
+    # step 2
+    def count_freq(self, token_tag_list, word_tag_list, lang="zh"):
         target_length = len(word_tag_list)
         token_tag_freq = {}
         word_tag_freq = {}
@@ -207,25 +208,25 @@ class Statistics:
             try:
                 token_tag_freq = Counter((word, tag) for (word, tag) in token_tag_list)
             except:
-                self.warning.append(f"critical zh token tag freq counting error occurred in {text_title}!")
+                self.warning.append(f"critical zh token tag freq counting error occurred!")
             try:
                 word_tag_freq = Counter((word, tag) for (word, tag) in word_tag_list)
             except:
-                self.warning.append(f"critical zh word tag freq counting error occurred in {text_title}!")
+                self.warning.append(f"critical zh word tag freq counting error occurred!")
             if token_tag_freq:
                 token_output_dict = self.initial_zlist_generator(token_tag_freq)
             if word_tag_freq:
                 word_output_dict = self.initial_zlist_generator(word_tag_freq)
             return token_tag_freq, word_tag_freq, token_output_dict, word_output_dict 
         if lang == "en":
-            try:                
+            try:
                 token_tag_freq = Counter((word , tag) for (word, tag) in token_tag_list)
             except:
-                self.warning.append(f"critical en token tag freq counting error occurred in {text_title}!")
-            try:                
+                self.warning.append(f"critical en token tag freq counting error occurred!")
+            try:
                 word_tag_freq = Counter((word , tag) for (word, tag) in word_tag_list)
             except:
-                self.warning.append(f"critical en word tag freq counting error occurred in {text_title}!")
+                self.warning.append(f"critical en word tag freq counting error occurred!")
             if target_length >= 1000:
                 wt_freq = {}
                 start = 0
@@ -236,7 +237,7 @@ class Statistics:
                         wt_freq = Counter((word, tag) for (word, tag) in sect_list)
                         word_tag_freq_list.append(wt_freq)
                     except:
-                        self.warning.append(f"critical en word tag sttr freq counting error occurred in {text_title}!")
+                        self.warning.append(f"critical en word tag sttr freq counting error occurred!")
                     start += interval
             return token_tag_freq, word_tag_freq, word_tag_freq_list
         
@@ -376,7 +377,8 @@ class Statistics:
                         try:
                             head_word = head
                             head_index += 1
-                        except:                            
+                        except:
+                            # print(word, word_tag, head, head_tag)
                             pass
         return head_word 
         
@@ -438,12 +440,15 @@ class Statistics:
             else:
                 re_dict = {}
                 for (w, t, f) in merge_dict[k]:
+                    #if t != "NNP":
+                    #    w = w.lower()
                     if (w,t) not in re_dict.keys():
                         re_dict[(w,t)]= f
                     else:
                         re_dict[(w,t)]+=f
                 for (w,t), f in re_dict.items():
-                    final_dict[k].append((w,t,f))
+                    final_dict[k].append((w,t,f))            
+                
         return final_dict
         
     def initial_zlist_generator(self, raw_token_tag_freq, file_id = ""): 
@@ -464,18 +469,20 @@ class Statistics:
                 pass
             elif w.isalnum():
                 pass            
-            elif "•" in w and t in ["nz", "nr", "nrf", "t"]:   
+            elif "•" in w and t in ["nz", "nr", "nrf", "t"]:  
                 pass
-            elif "" in w and t in ["nz", "nr", "nrf", "t"]:   
+            elif "" in w and t in ["nz", "nr", "nrf", "t"]:  
                 pass
             elif "·" in w and t in ["nz", "nr", "nrf", "t"]:
                 pass
-            elif "/" in  w: 
+            elif "/" in  w:
                 pass
             elif "+" in w and t in ['nz'] or "＋" in w and t in ['nz']: 
                 pass
             elif w in ["℃","‰"]:
                 pass
+            elif "〔" in w and "〕" in w: 
+                pass 
             else:
                 if file_id:
                     msg = f"WARNING: unknown zh words found in {file_id} => {w}/{t}/{f}\n"
@@ -502,17 +509,17 @@ class Statistics:
                 nature = "cap-unknown"
         else:
             nature = "unknown"
-        return nature    
-    
+        return nature
+    # step 3
     def initial_elist_generator(self, raw_token_tag_freq, file_id = ""):
         word_wd = defaultdict(list) 
         num_regex = r'\d'
         for (w,t), f in raw_token_tag_freq.items():
-            wd,tg = self.en_pos_filter(w, t)  
+            wd,tg = self.en_pos_filter(w, t) 
             r = re.search(num_regex, w)
-            if t in ["XM", "XN", "XW"]:  
+            if t in ["XM", "XN", "XW","XT", "XZ"]:  
                 pass
-            elif not t.isalpha() and not t.endswith('P$') or t == "SYM" :             
+            elif not t.isalpha() and not t.endswith('P$') or t == "SYM" : 
                 try:                       
                     word_wd[wd].append((w, t, f))
                 except:
@@ -521,22 +528,23 @@ class Statistics:
                     else:
                         msg = f"WARNING: critical en words error found: => {w}/{t}/{f}\n"
                     if msg not in self.warning:
-                        self.warning.append(msg)                    
+                        self.warning.append(msg)  
+                    
             elif t == "FW":
-                word_wd[wd].append((w,t,f)) 
+                word_wd[wd].append((w,t,f))                     
             elif r:
                 if '-' in w:
                     word_wd[wd].append((w, t, f))
                 elif t.startswith("NNP"):
                     word_wd[w].append((w, t, f))
                 else:
-                    word_wd[wd].append((w, t, f))                      
+                    word_wd[wd].append((w, t, f))                
             elif t == "CD" or t == "LS":
                 if w.isupper():
-                    word_wd[w].append((w, t, f))                  
+                    word_wd[w].append((w, t, f))                
                 else:
                     word_wd[wd].append((w, t, f))
-            elif len(w)>2 and "-" in w:                        
+            elif len(w)>2 and "-" in w:                  
                 word_wd[wd].append((w, t, f))       
             elif len(w)>1 and w.isupper() or "." in w:
                 if w not in ['FOREIGN', 'LANGUAGE', 'TEACHING',\
