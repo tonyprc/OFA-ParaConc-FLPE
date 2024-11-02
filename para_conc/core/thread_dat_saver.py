@@ -1,17 +1,19 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# Thread for converting and saving corpus files from json to dat
 # Copyright (c) 2024 Tony Chang (42716403@qq.com)
 
 import os, sys, time, json, pickle
 from PySide6.QtCore import Signal, Slot, QThread
 from para_conc.core.CorpusGeneral import GenCorpus
 from para_conc.core.CorpusEDU import EduCorpus
+from para_conc.core.CorpusGOC import GocCorpus
 
 class DatSaverThread(QThread):
     pbar_signal = Signal([int, int]) 
     msg_m_signal = Signal(str)       
+    refresh_signal = Signal(list)
     output_window_signal = Signal([str, str, str])
-    refresh_signal = Signal(list)    
     def __init__(self, dict_list):   
         super(DatSaverThread, self).__init__()
         self._currentDir = os.getcwd()
@@ -24,7 +26,7 @@ class DatSaverThread(QThread):
 
     def __del__(self):
         pass
-      
+    
     def open_json_file(self, json_file):
         json_read = ''
         with open(json_file, 'rb') as f:
@@ -53,26 +55,56 @@ class DatSaverThread(QThread):
                 elif c_dict['genre'][1] == "educational philosophy":
                     corpera_item = EduCorpus()
                 else: pass
-                if corpera_item:
-                    self.msg_m_signal.emit("开始生成语料，请稍候....")
-                    corpera_item.generate_corpus(c_dict)                
-                    corpera_item.id = c_id
+                if corpera_item:               
                     if c_dict['genre'][1] == "educational philosophy":
+                        self.msg_m_signal.emit("开始生成语料，请稍候....")
+                        corpera_item.generate_corpus(c_dict)                
+                        corpera_item.id = c_id
                         self.pbar_signal.emit(1,5)
-                        self.msg_m_signal.emit("开始获取章节，请稍候....")
-                        corpera_item.get_articles(c_dict)
+                        self.msg_m_signal.emit("开始生成词性列表，请稍候....")
+                        corpera_item.get_word_tag_list()
                         self.pbar_signal.emit(2,5)
-                        self.msg_m_signal.emit("开始更新注释，请稍候....")
-                        corpera_item.copy_notes()
+                        self.msg_m_signal.emit("开始生成词频，请稍候....")
+                        corpera_item.get_freq_dict()
                         self.pbar_signal.emit(3,5)
-                        self.msg_m_signal.emit("开始统计各章节语料，请稍候....")
-                        corpera_item.calculating_articles()
+                        self.msg_m_signal.emit("开始生成词频字典，请稍候....")
+                        corpera_item.get_output_dict()
                         self.pbar_signal.emit(4,5)
                         self.msg_m_signal.emit("开始计算英文类形比，请稍候....")
-                        corpera_item.update_ratio()
+                        corpera_item.get_en_sttr()
                         self.pbar_signal.emit(5,5)
-                        self.msg_m_signal.emit(f"语料{i}统计完毕")                        
+                        self.msg_m_signal.emit(f"语料{i}统计完毕")
+                    elif c_dict['genre'][1] == "governance of china":
+                        self.msg_m_signal.emit("开始获取基本信息，请稍候....")
+                        corpera_item.get_info(c_dict)                
+                        corpera_item.id = c_id
+                        self.pbar_signal.emit(1,8)
+                        self.msg_m_signal.emit("开始获取目录，请稍候....")
+                        corpera_item.get_contents(c_dict)
+                        self.pbar_signal.emit(2,8)
+                        self.msg_m_signal.emit("开始获取主题，请稍候....")
+                        corpera_item.get_theme(c_dict)
+                        self.pbar_signal.emit(3,8)
+                        self.msg_m_signal.emit("开始获取附录，请稍候....")
+                        corpera_item.get_annex(c_dict)
+                        self.pbar_signal.emit(4,8)                        
+                        self.msg_m_signal.emit("开始生成全书词性列表，请稍候....")
+                        corpera_item.get_word_tag_list()
+                        self.pbar_signal.emit(5,8)
+                        self.msg_m_signal.emit("开始生成全书词频，请稍候....")
+                        corpera_item.get_freq_dict()
+                        self.pbar_signal.emit(6,8)
+                        self.msg_m_signal.emit("开始生成全书词频字典，请稍候....")
+                        corpera_item.get_output_dict()
+                        self.pbar_signal.emit(7,8)
+                        self.msg_m_signal.emit("开始计算全书英文类形比，请稍候....")
+                        corpera_item.get_en_sttr()
+                        self.pbar_signal.emit(8,8)
+                        self.msg_m_signal.emit(f"语料{i}统计完毕")
                     else:
+                        self.msg_m_signal.emit("开始生成语料，请稍候....")
+                        corpera_item.generate_corpus(c_dict)                
+                        corpera_item.id = c_id
                         self.pbar_signal.emit(1,5)
                         self.msg_m_signal.emit("开始生成词性列表，请稍候....")
                         corpera_item.get_word_tag_list()
