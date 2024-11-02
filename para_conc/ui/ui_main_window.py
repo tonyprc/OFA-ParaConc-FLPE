@@ -1,8 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# Core interface program
 # Copyright (c) 2024 Tony Chang (42716403@qq.com)
 
-import os, sys, copy, pickle
+# 2024-10-24: change the tree structure of GOC and UXEP corpora
+# 2024-10-24: update parent finding of the tree structure
+# 2024-10-24: try restoring this program damaged on 2024-10-18
+# 2024-10-25: replace "[PS]" to \n for text to show
+# 2024-10-27: add index dict to self.current_corpus and revise correlated functions
+# 2024-10-31: fix the bug of over-long shown title for current corpus and the improper splitting by "、" for theme title
+
+import os, sys, copy, pickle, re
 
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon, QFont, QAction, QPixmap, QBrush, QColor,QTextOption
@@ -23,8 +31,6 @@ class UIMainWindow(QMainWindow):
     load_corpus = Signal(str)
     load_tag_corpus = Signal(str)
     textbook_window_display = Signal()
-    zh_freq_output = Signal()
-    en_freq_output = Signal()
     pynlpir_output = Signal()
     regex_output = Signal()
     cplist_output = Signal()
@@ -447,15 +453,70 @@ class UIMainWindow(QMainWindow):
         self._current_corpus = None
 
         self._corpusFrame.setMaximumWidth(250)
-        self._optionFrame.setMaximumWidth(250)
-        
+        self._optionFrame.setMaximumWidth(250)        
+  
     def find_parents(self,item):
-        pa = item.parent()
-        if pa is None:
-            return item.text(0),""
+        family_tree = {}
+        family_tree['0']= item.text(0)
+        U1 = item.parent()
+        if U1 is None:
+            pass
         else:
-            return pa.text(0),item.text(0)
-        
+            U2 = U1.parent()
+            if U2 is None:
+                family_tree['0'] = U1.text(0)
+                family_tree["1"] = item.text(0)
+            else:
+                U3 = U2.parent()
+                if U3 is None:
+                    family_tree['0'] = U2.text(0)
+                    family_tree["1"] = U1.text(0)
+                    family_tree["2"] = item.text(0)
+                else:
+                    U4 = U3.parent()
+                    if U4 is None:
+                        family_tree['0'] = U3.text(0)
+                        family_tree["1"] = U2.text(0)
+                        family_tree["2"] = U1.text(0)
+                        family_tree["3"] = item.text(0)
+                    else:
+                        U5 = U4.parent()
+                        if U5 is None:
+                            family_tree['0'] = U4.text(0)
+                            family_tree["1"] = U3.text(0)
+                            family_tree["2"] = U2.text(0)
+                            family_tree["3"] = U1.text(0)
+                            family_tree["4"] = item.text(0)
+                        else:
+                            U6 = U5.parent()
+                            if U6 is None:
+                                family_tree['0'] = U5.text(0)
+                                family_tree["1"] = U4.text(0)
+                                family_tree["2"] = U3.text(0)
+                                family_tree["3"] = U2.text(0)
+                                family_tree["4"] = U1.text(0)
+                                family_tree["5"] = item.text(0)
+                            else:
+                                U7 = U6.parent()
+                                if U7 is None:
+                                    family_tree['0'] = U6.text(0)
+                                    family_tree["1"] = U5.text(0)
+                                    family_tree["2"] = U4.text(0)
+                                    family_tree["3"] = U3.text(0)
+                                    family_tree["4"] = U2.text(0)
+                                    family_tree["5"] = U1.text(0)
+                                    family_tree["6"] = item.text(0)
+                                else:
+                                    family_tree['0'] = U7.text(0)
+                                    family_tree["1"] = U6.text(0)
+                                    family_tree["2"] = U5.text(0)
+                                    family_tree["3"] = U4.text(0)
+                                    family_tree["4"] = U3.text(0)
+                                    family_tree["5"] = U2.text(0)
+                                    family_tree["6"] = U1.text(0)
+                                    family_tree["7"] = item.text(0)
+        return family_tree        
+ 
     def set_corpora_list(self, corpus_ids: [], corpora: []):
         self._corpusWindow = QTreeWidget()
         self._corpusWindow.setStyleSheet("QTreeWidget{background-color:%s;border-image: url(./app_data/images/bg.png);border:0px;}"% ("WhiteSmoke"))
@@ -480,7 +541,7 @@ class UIMainWindow(QMainWindow):
             root.setText(0, cat)
             root_list.append(root)
             for corp_id in corpus_ids:
-                if corp_id.startswith(cat) and  "UXEP" not in corp_id:
+                if corp_id.startswith(cat) and  "UXEP" not in corp_id and "GOC" not in corp_id:
                     child = QTreeWidgetItem()
                     child.setText(0,corp_id)
                     root.addChild(child)                    
@@ -488,13 +549,91 @@ class UIMainWindow(QMainWindow):
                 elif corp_id.startswith(cat) and  "UXEP" in corp_id:
                     for corp in corpora:
                         if corp_id == corp[1]:
+                            child_list = []
                             current_corpus = self.open_dat_file(corp[0])
-                            for article in current_corpus.articles:
-                                child = QTreeWidgetItem()
-                                child.setText(0, str(article.num) + " - " + article.title_zh)                                                         
-                                root.addChild(child)
-                                root_list.append(child) 
+                            info = current_corpus.info.id_zh
+                            child_list.append(info)
+                            contents = current_corpus.contents.id_zh
+                            child_list.append(contents)
+                            if len(current_corpus.preface.articles) != 0:
+                                preface = current_corpus.preface.id_zh
+                                child_list.append(preface)
+                            if len(current_corpus.themes) != 0:
+                                themes = "主题"
+                                child_list.append(themes)
+                            if len(current_corpus.chapters.articles) != 0:
+                                chapters = current_corpus.chapters.id_zh
+                                child_list.append(chapters)
+                            if len(current_corpus.annex.articles) != 0:
+                                annex = current_corpus.annex.id_zh
+                                child_list.append(annex)
+                            for children in child_list:
+                                if children not in [chapters, annex]:
+                                    child = QTreeWidgetItem()
+                                    child.setText(0, children)                                                         
+                                    root.addChild(child)
+                                    root_list.append(child)
+                                else:
+                                    child = QTreeWidgetItem()
+                                    child.setText(0, children)
+                                    if children == chapters:
+                                        for art in current_corpus.chapters.articles:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                            child.addChild(new_item)
+                                    if children == annex:
+                                        for art in current_corpus.annex.articles:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                            child.addChild(new_item)
+                                    root.addChild(child)
+                                    root_list.append(child)
                             break
+                elif corp_id.startswith(cat) and  "GOC" in corp_id:
+                    for corp in corpora:
+                        if corp_id == corp[1]:
+                            current_corpus = self.open_dat_file(corp[0])
+                            child = QTreeWidgetItem()
+                            #child.setText(0, current_corpus.title_zh + "-" + current_corpus.volume_zh)
+                            child.setText(0, corp_id)
+                            info = current_corpus.info.id_zh
+                            contents = current_corpus.contents.id_zh                            
+                            themes = "主题"
+                            annex = ""
+                            child_list = [info, contents, themes]
+                            if current_corpus.annex:
+                                if len(current_corpus.annex.articles) != 0:
+                                    annex = current_corpus.annex.id_zh
+                                    child_list.append(annex)
+                            for children in child_list:
+                                if children in [info, contents]:
+                                    grandchild = QTreeWidgetItem()
+                                    grandchild.setText(0, children)                                                         
+                                    child.addChild(grandchild)                                    
+                                else:
+                                    grandchild = QTreeWidgetItem()
+                                    grandchild.setText(0, children)
+                                    if children == themes:
+                                        for theme in current_corpus.themes:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(theme.num) + "-" + "、".join(theme.title_zh.split("、")[1:]))                                        
+                                            for art in theme.articles:
+                                                next_item = QTreeWidgetItem()
+                                                next_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                                new_item.addChild(next_item)
+                                            grandchild.addChild(new_item)
+                                            child.addChild(grandchild)
+                                    if children == annex:
+                                        if len(current_corpus.annex.articles) == 1:
+                                            pass
+                                        else:
+                                            for art in current_corpus.annex.articles:
+                                                new_item = QTreeWidgetItem()
+                                                new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                                grandchild.addChild(new_item)
+                                                child.addChild(grandchild)
+                            root.addChild(child)
+                            root_list.append(child)                                        
                 else:
                     pass
         if root_list:
@@ -503,7 +642,7 @@ class UIMainWindow(QMainWindow):
             self._corpusFrame.setLayout(self._corpusFrameLayout)
         self._corpusFrame.setTitle(f"语料列表（{len(corpus_ids)}）")
         self._corpora = corpora
-        
+
     def reload_corpora_list(self, corpus_ids: [], corpora: []):
         old_root = self._corpusWindow.invisibleRootItem()
         child_count = old_root.childCount()
@@ -511,7 +650,7 @@ class UIMainWindow(QMainWindow):
             child = old_root.child(i)
             old_root.removeChild(child)
         self._corpusWindow.clear()
-        cat_list = []       
+        cat_list = []
         for corp_id in corpus_ids:
             stem = corp_id.split(".")[0]
             if stem not in cat_list:
@@ -522,18 +661,110 @@ class UIMainWindow(QMainWindow):
             root.setText(0, cat)
             root_list.append(root)
             for corp_id in corpus_ids:
-                if corp_id.startswith(cat):
+                if corp_id.startswith(cat) and  "UXEP" not in corp_id and "GOC" not in corp_id:
                     child = QTreeWidgetItem()
                     child.setText(0,corp_id)
-                    root.addChild(child)
+                    root.addChild(child)                    
                     root_list.append(child)
+                elif corp_id.startswith(cat) and  "UXEP" in corp_id:
+                    for corp in corpora:
+                        if corp_id == corp[1]:
+                            child_list = []
+                            current_corpus = self.open_dat_file(corp[0])
+                            info = current_corpus.info.id_zh
+                            child_list.append(info)
+                            contents = current_corpus.contents.id_zh
+                            child_list.append(contents)
+                            if len(current_corpus.preface.articles) != 0:
+                                preface = current_corpus.preface.id_zh
+                                child_list.append(preface)
+                            if len(current_corpus.themes) != 0:
+                                themes = "主题"
+                                child_list.append(themes)
+                            if len(current_corpus.chapters.articles) != 0:
+                                chapters = current_corpus.chapters.id_zh
+                                child_list.append(chapters)
+                            if len(current_corpus.annex.articles) != 0:
+                                annex = current_corpus.annex.id_zh
+                                child_list.append(annex)
+                            for children in child_list:
+                                if children not in [chapters, annex]:
+                                    child = QTreeWidgetItem()
+                                    child.setText(0, children)                                                         
+                                    root.addChild(child)
+                                    root_list.append(child)
+                                else:
+                                    child = QTreeWidgetItem()
+                                    child.setText(0, children)
+                                    if children == chapters:
+                                        for art in current_corpus.chapters.articles:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                            child.addChild(new_item)
+                                    if children == annex:
+                                        for art in current_corpus.annex.articles:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                            child.addChild(new_item)
+                                    root.addChild(child)
+                                    root_list.append(child)
+                            break
+                elif corp_id.startswith(cat) and  "GOC" in corp_id:
+                    for corp in corpora:
+                        if corp_id == corp[1]:
+                            current_corpus = self.open_dat_file(corp[0])
+                            child = QTreeWidgetItem()
+                            #child.setText(0, current_corpus.title_zh + "-" + current_corpus.volume_zh)
+                            child.setText(0, corp_id)
+                            info = current_corpus.info.id_zh
+                            contents = current_corpus.contents.id_zh                            
+                            themes = "主题"
+                            child_list = [info, contents, themes]
+                            if current_corpus.annex:
+                                if len(current_corpus.annex.articles) != 0:
+                                    annex = current_corpus.annex.id_zh
+                                    child_list.append(annex)
+                            for children in child_list:
+                                if children not in [themes, annex]:
+                                    grandchild = QTreeWidgetItem()
+                                    grandchild.setText(0, children)                                                         
+                                    child.addChild(grandchild)                                    
+                                else:
+                                    grandchild = QTreeWidgetItem()
+                                    grandchild.setText(0, children)
+                                    if children == themes:
+                                        for theme in current_corpus.themes:
+                                            new_item = QTreeWidgetItem()
+                                            new_item.setText(0, str(theme.num) + "-" + theme.title_zh.split("、")[1])                                        
+                                            for art in theme.articles:
+                                                next_item = QTreeWidgetItem()
+                                                next_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                                new_item.addChild(next_item)
+                                            grandchild.addChild(new_item)
+                                            child.addChild(grandchild)
+                                    if children == annex:
+                                        if len(current_corpus.annex.articles) == 1:
+                                            pass
+                                        else:
+                                            for art in current_corpus.annex.articles:
+                                                new_item = QTreeWidgetItem()
+                                                new_item.setText(0, str(art.num) + "-" + art.title_zh)
+                                                grandchild.addChild(new_item)
+                                                child.addChild(grandchild)
+                            root.addChild(child)
+                            root_list.append(child)                                        
+                else:
+                    pass
         if root_list:
-            self._corpusWindow.insertTopLevelItems(0,root_list) 
+            self._corpusWindow.insertTopLevelItems(0,root_list)
+            self._corpusFrameLayout.addWidget(self._corpusWindow, alignment=Qt.AlignTop)
+            self._corpusFrame.setLayout(self._corpusFrameLayout)
         self._corpusFrame.setTitle(f"语料列表（{len(corpus_ids)}）")
-            
+        self._corpora = corpora        
+
     def reader_check_opt(self):
-        return self._read_opt.currentIndex()    
-        
+        return self._read_opt.currentIndex()
+    
     def reader_check_corpus(self):
         warning_info = ""
         if self._current_corpus:
@@ -575,32 +806,43 @@ class UIMainWindow(QMainWindow):
                 text = "\n".join(passages)
         else:
             pass
-        return text            
-        
+        return text
+      
     def text_reader(self):
         warning = self.reader_check_corpus()
         if warning:
             self.set_status_text(warning)
         else:
-            if self._current_corpus.genre_en not in ["governance of china", "educational philosophy"]:
-                date = self._current_corpus.date_zh.replace("[DT]","")
+            main_corpus = self._current_corpus[0]
+            current_corpus = self._current_corpus[1]
+            index = self._current_corpus[2]
+            show_title = ""
+            if not current_corpus:
+                date = main_corpus.date_zh.replace("[DT]","")
                 if "（" not in date:
                     date = "（"+ date + "）"
-                show_title = "《"+ self._current_corpus.title_zh + "》" + date
-            elif self._current_corpus.genre_en == "governance of china":
-                show_title = "《"+ self._current_corpus.title_zh + "》" \
-                             + self._current_corpus.volume_id_zh \
-                             + self._current_corpus.edition_id_zh
+                show_title = "《"+ main_corpus.title_zh + "》" + date
+            elif index['genre'][1] == "governance of china":
+                show_title = "《"+ main_corpus.title_zh + "·" + \
+                             main_corpus.volume_zh + \
+                             main_corpus.edition_zh + "·" + \
+                             current_corpus.title_zh + "》" 
+            elif index['genre'][1] == "educational philosophy":                
+                show_title = "《"+ main_corpus.title_zh + "·" + \
+                             current_corpus.title_zh + "》"
             else:
-                show_title = "《"+ self._current_corpus.title_zh + "》" \
-                             + self._current_corpus.edition_id_zh
-            self._corpus_data_form.setTitle("当前语料:"+show_title)
-            text_to_show = self.reader_get_current_text(self._current_corpus)
-            self._result_window.clear()
-            self._result_window.setPlainText(text_to_show)
-            self._result_window.setStyleSheet("QTextBrowser{background-color:%s;border-image: url(./app_data/images/rd_bg.png);border:0px;}"% ("WhiteSmoke"))
-            self._src_result_form.setTitle("当前语料内容")
-            self.reset_result_image()
+                pass
+            if show_title:
+                self._corpus_data_form.setTitle("当前语料:"+show_title)
+                if not current_corpus:
+                    text_to_show = self.reader_get_current_text(main_corpus)
+                else:
+                    text_to_show = self.reader_get_current_text(current_corpus)
+                self._result_window.clear()
+                self._result_window.setPlainText(text_to_show)
+                self._result_window.setStyleSheet("QTextBrowser{background-color:%s;border-image: url(./app_data/images/rd_bg.png);border:0px;}"% ("WhiteSmoke"))
+                self._src_result_form.setTitle("当前语料内容")
+                self.reset_result_image()
 
     def get_current_text(self, current_corpus):
         lang_opt = self.reader_check_opt()
@@ -610,8 +852,8 @@ class UIMainWindow(QMainWindow):
             text_to_display = current_corpus.raw_text_en
         else:
             text_to_display = self.reader_get_bitext(current_corpus,lang_opt)
-        return text_to_display
-            
+        return text_to_display    
+   
     def fill_out_stats(self, corpus):
         self._bi_para_box.setText(f"{corpus.bi_para_count}")
         self._bi_sent_box.setText(f"{corpus.bi_sent_count}")
@@ -621,59 +863,157 @@ class UIMainWindow(QMainWindow):
         self._tt_para_box.setText(f"{corpus.en_para_count}")
         self._ss_sent_box.setText(f"{corpus.zh_sent_count}")
         self._tt_sent_box.setText(f"{corpus.en_sent_count}")
-        self._ss_token_box.setText(f"{corpus.zh_word_token_count}")
-        self._ss_type_box.setText(f"{corpus.zh_word_type_count}")
-        self._tt_token_box.setText(f"{corpus.en_word_token_count}")
-        self._tt_type_box.setText(f"{corpus.en_word_type_count}")
-        if corpus.zh_word_ttr == 0:
-            self._ss_ttr_box.setText("0")
-        else:
-            self._ss_ttr_box.setText(f"{corpus.zh_word_ttr*100:.2f}%")
-        if corpus.zh_word_sttr == 0:
-            self._ss_sttr_box.setText("0")
-        else:
-            self._ss_sttr_box.setText(f"{corpus.zh_word_sttr*100:.2f}%")
-        if corpus.en_word_ttr == 0:
-            self._tt_ttr_box.setText("0")
-        else:
-            self._tt_ttr_box.setText(f"{corpus.en_word_ttr*100:.2f}%")
-        if corpus.en_word_sttr == 0:
-            self._tt_sttr_box.setText("0")
-        else:
-            self._tt_sttr_box.setText(f"{corpus.en_word_sttr*100:.2f}%")            
+        try:
+            self._ss_token_box.setText(f"{corpus.zh_word_token_count}")
+            self._ss_type_box.setText(f"{corpus.zh_word_type_count}")
+            self._tt_token_box.setText(f"{corpus.en_word_token_count}")
+            self._tt_type_box.setText(f"{corpus.en_word_type_count}")
+            if corpus.zh_word_ttr == 0:
+                self._ss_ttr_box.setText("0")
+            else:
+                self._ss_ttr_box.setText(f"{corpus.zh_word_ttr*100:.2f}%")
+            if corpus.zh_word_sttr == 0:
+                self._ss_sttr_box.setText("0")
+            else:
+                self._ss_sttr_box.setText(f"{corpus.zh_word_sttr*100:.2f}%")
+            if corpus.en_word_ttr == 0:
+                self._tt_ttr_box.setText("0")
+            else:
+                self._tt_ttr_box.setText(f"{corpus.en_word_ttr*100:.2f}%")
+            if corpus.en_word_sttr == 0:
+                self._tt_sttr_box.setText("0")
+            else:
+                self._tt_sttr_box.setText(f"{corpus.en_word_sttr*100:.2f}%")
+        except:
+            pass
         self._src_scope_3.setChecked(True)
-  
+        
     def openCurrentFileRequest(self, item):
         i = item.text(0)
+        tree_dict = self.find_parents(item)
+        tree_levels = len(tree_dict.keys())
         for corp in self._corpora:
-            if corp[1].split(".")[0] not in ["UXEP"]:
+            if corp[1].split(".")[0] not in ["UXEP", "GOC"]:
                 if i == corp[1]:
-                    corpus = self.open_dat_file(corp[0])                
-                    self._current_corpus = (corpus,"")
-                    self.update_current_corpus.emit(corpus.title_zh)
+                    temp_corpus = self.open_dat_file(corp[0])
+                    self._current_corpus = (temp_corpus,"")
+                    self.update_current_corpus.emit(temp_corpus.title_zh)
                     break
-            else:
+            elif corp[1].split(".")[0] == "UXEP":
                 temp_corpus = self.open_dat_file(corp[0])
-                for art in temp_corpus.articles:
-                    if  i.split(" - ")[1] == art.title_zh:
-                        self._current_corpus = (self.open_dat_file(corp[0]),art)                        
+                if tree_levels == 1:
+                    pass
+                if tree_levels == 2:
+                    if i == temp_corpus.info.id_zh:                        
+                        art = temp_corpus.info
+                        self._current_corpus = (temp_corpus,art)
                         self.update_current_corpus.emit(art.title_zh)
-                        break                        
+                    if i == temp_corpus.contents.id_zh:                        
+                        art = temp_corpus.contents
+                        self._current_corpus = (temp_corpus,art)
+                        self.update_current_corpus.emit(art.title_zh)
+                    if i == temp_corpus.preface.id_zh:                        
+                        art = temp_corpus.preface.articles[0]
+                        self._current_corpus = (temp_corpus,art)
+                        self.update_current_corpus.emit(art.title_zh)
+                if tree_levels == 3:
+                    if tree_dict['1'] == temp_corpus.annex.id_zh:
+                        for art in temp_corpus.annex.articles:
+                            if i.split("-")[0]== art.num:                                
+                                self._current_corpus = (temp_corpus,art)
+                                self.update_current_corpus.emit(art.title_zh)
+                                break
+                    else:
+                        for art in temp_corpus.chapters.articles:                            
+                            if i.split("-")[0]== art.num:                                
+                                self._current_corpus = (temp_corpus,art)
+                                self.update_current_corpus.emit(art.title_zh)
+                                break                        
+            elif corp[1].split(".")[0] == "GOC":
+                temp_corpus = self.open_dat_file(corp[0])
+                if tree_levels == 1:
+                    pass 
+                elif tree_levels == 2:
+                    pass 
+                elif tree_levels == 3:
+                    pa_id = tree_dict['1']
+                    if pa_id == temp_corpus.id:
+                        if i == temp_corpus.info.id_zh:
+                            art = temp_corpus.info                            
+                            self._current_corpus = (temp_corpus,art)
+                            self.update_current_corpus.emit(art.title_zh)
+                        elif i == temp_corpus.contents.id_zh:
+                            art = temp_corpus.contents                            
+                            self._current_corpus = (temp_corpus,art)
+                            self.update_current_corpus.emit(art.title_zh)
+                        elif temp_corpus.annex:
+                            if i == temp_corpus.annex.id_zh:
+                                if len(temp_corpus.annex.articles)== 1:
+                                    if i == temp_corpus.annex.articles[0].title_zh:
+                                        art = temp_corpus.annex.articles[0]                                        
+                                        self._current_corpus = (temp_corpus,art)
+                                        self.update_current_corpus.emit(art.title_zh)
+                    else:
+                        pass
+                elif tree_levels == 4:
+                    if temp_corpus.annex:
+                        if len(temp_corpus.annex.articles)>=2:
+                            if tree_dict['2'] == temp_corpus.annex.id_zh:
+                                for art in temp_corpus.annex.articles:
+                                    if i.split("-")[0]== art.num:                                        
+                                        self._current_corpus = (temp_corpus,art)
+                                        self.update_current_corpus.emit(art.title_zh)
+                                        break
+                    else:
+                        pass  
+                elif tree_levels == 5:
+                    pa_id = tree_dict['1']
+                    if pa_id == temp_corpus.id:
+                        if tree_dict['2'] == "主题":
+                            theme_num = tree_dict['3'].split('-')[0]
+                            art_num = i.split('-')[0]
+                            for theme in temp_corpus.themes:
+                                if theme_num == theme.num:
+                                    for art in theme.articles:
+                                        if art_num == art.num:                                            
+                                            self._current_corpus = (temp_corpus,art)
+                                            self.update_current_corpus.emit(art.title_zh)
+                                            break
+                    else:
+                        pass
+                else:
+                    pass
         if self._current_corpus:
             self.load_tag_corpus.emit('start')
             main_corpus = self._current_corpus[0]
             art_corpus = self._current_corpus[1]
-            if art_corpus:
-                show_title = "《"+main_corpus.title_zh+"·"+art_corpus.title_zh + "》"
+            if art_corpus:                
+                if "治国理政"in main_corpus.title_zh:
+                    art_title_zh = art_corpus.title_zh
+                    if len(art_corpus.title_zh)>=30:
+                        art_title_zh = art_corpus.title_zh[:30]+"..."                        
+                    show_title = "《"+main_corpus.title_zh+"·"+main_corpus.volume_zh+main_corpus.edition_zh+"·"+art_title_zh + "》"
+                elif "教育讲义" in main_corpus.title_zh:
+                    show_title = "《"+main_corpus.title_zh+"·"+art_corpus.title_zh + "》"
+                else:
+                    art_title_zh = art_corpus.title_zh
+                    if len(art_corpus.title_zh)>=30:
+                        art_title_zh = art_corpus.title_zh[:30]+"..."
+                    show_title = "《"+main_corpus.title_zh+"·"+art_corpus.title_zh + "》"
                 self.fill_out_stats(art_corpus)
-                text_to_show = self.get_current_text(art_corpus)                            
+                full_text = self.get_current_text(art_corpus)
+                text_to_show = re.sub(r"\s*\[PS\]\s*", "\n", full_text)
             else:
                 date = main_corpus.date_zh.replace("[DT]","")
                 if "（" not in date:
                     date = "（"+ date + "）"
-                show_title = "《"+ main_corpus.title_zh + "》" + date
+                main_title_zh = main_corpus.title_zh
+                if len(main_corpus.title_zh)>=30:
+                    main_title_zh = main_corpus.title_zh[:30]+"..." 
+                show_title = "《"+ main_title_zh + "》" + date
                 self.fill_out_stats(main_corpus)
-                text_to_show = self.get_current_text(main_corpus)                
+                full_text = self.get_current_text(main_corpus)
+                text_to_show = re.sub(r"\s*\[PS\]\s*", "\n", full_text)
             self._result_window.clear()
             self._result_window.setPlainText(text_to_show)
             self.reset_result_image()
@@ -804,3 +1144,4 @@ class UIMainWindow(QMainWindow):
         if modifiers == (Qt.ControlModifier) and event.key()==Qt.Key_S:
             self._input_box.clear()
             self._input_box.setFocus()
+
