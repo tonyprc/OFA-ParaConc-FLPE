@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# Core concordancing thread
 # Copyright (c) 2024 Tony Chang (42716403@qq.com)
 
 import os, sys, time, json, pickle, re, copy
@@ -31,8 +32,7 @@ class SrcThread(QThread):
         idx_num = 1
         hit_words = 0
         hit_sents = 0               
-        j = len(self.corpora)
-        self.msg_m_signal.emit(f"{j}份语料检索中，请稍候....")
+        j = len(self.corpora)        
         self.pbar_signal.emit(0,j)
         time.sleep(2)
         T1 = time.perf_counter()        
@@ -43,17 +43,19 @@ class SrcThread(QThread):
             query, query_2 = self._build_query(self.req, self.req.mode)
         if self.req.mode == SearchMode.REGEX:
             if self.scope.value == 1:
+                self.msg_m_signal.emit(f"{j}份语料检索中，请稍候....")
                 for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
                     corpus = self.open_dat_file(corp_path)
-                    if corpus.genre_en not in ["educational philosophy"]:
+                    ref_corpus = ""
+                    if corpus.genre_en not in ["educational philosophy", "governance of china"]:
                         if src_lang == "zh":
                             self.msg_m_signal.emit(f"{corpus.title_zh}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_zh_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         else:
                             self.msg_m_signal.emit(f"{corpus.title_en}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_en_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         result.num_list.extend(num_list)
                         result.lang_list.extend(lang_list)
                         result.sent_list.extend(sent_list)
@@ -62,90 +64,633 @@ class SrcThread(QThread):
                         hit_sents = hit_sts
                     else:
                         if corpus.genre_en in ["educational philosophy"]:
-                            for art in corpus.articles:
+                            for corp in [corpus.info, corpus.contents]:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                            
+                            for art in corpus.preface.articles:
                                 if src_lang == "zh":
                                     self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 else:
                                     self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_en_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                                
+                            for art in corpus.chapters.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts 
+                            for art in corpus.annex.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 result.num_list.extend(num_list)
                                 result.lang_list.extend(lang_list)
                                 result.sent_list.extend(sent_list)
                                 idx_num = idx_n
                                 hit_words = hit_wds
                                 hit_sents = hit_sts
-                    self.pbar_signal.emit(f_num,j)
-            if self.scope.value == 2:
-                for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
-                    corpus = self.open_dat_file(corp_path)
-                    art_id = corpus_id
-                    if corpus.genre_en not in ["educational philosophy"]:
-                        if src_lang == "zh":
-                            self.msg_m_signal.emit(f"{corpus.title_zh}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        else:
-                            self.msg_m_signal.emit(f"{corpus.title_en}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        result.num_list.extend(num_list)
-                        result.lang_list.extend(lang_list)
-                        result.sent_list.extend(sent_list)
-                        idx_num = idx_n
-                        hit_words = hit_wds
-                        hit_sents = hit_sts
-                    else:
-                        if corpus.genre_en in ["educational philosophy"]:
-                            if art_id in corp_path:
-                                for art in corpus.articles:
+                        if corpus.genre_en in ["governance of china"]:
+                            for corp in [corpus.info, corpus.contents]:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                            
+                            for theme in corpus.themes:
+                                for art in theme.articles:
                                     if src_lang == "zh":
                                         self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                  self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                  self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                     else:
                                         self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                  self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                  self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                     result.num_list.extend(num_list)
                                     result.lang_list.extend(lang_list)
                                     result.sent_list.extend(sent_list)
                                     idx_num = idx_n
                                     hit_words = hit_wds
                                     hit_sents = hit_sts
-                            else:
-                                for art in corpus.articles:
-                                    if art_id == art.title_zh:
-                                        if src_lang == "zh": 
-                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                            if corpus.annex:
+                                for art in corpus.annex.articles:
+                                    if src_lang == "zh":
+                                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                    else:
+                                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                    result.num_list.extend(num_list)
+                                    result.lang_list.extend(lang_list)
+                                    result.sent_list.extend(sent_list)
+                                    idx_num = idx_n
+                                    hit_words = hit_wds
+                                    hit_sents = hit_sts 
+                    self.pbar_signal.emit(f_num,j)
+            if self.scope.value == 2:
+                new_corpora = self.corpora[0]
+                index_list = self.corpora[1]
+                f_num = len(index_list)
+                self.msg_m_signal.emit(f"{f_num}份语料检索中，请稍候....")
+                for family in index_list:
+                    if len(family.keys())== 1:
+                        corp_root = family['0']
+                        for corp in new_corpora:
+                            if corp_root in corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corpus.type_en == "article":
+                                    if src_lang == "zh":
+                                        self.msg_m_signal.emit(f"{corpus.title_zh}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_zh_tag(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                    else:
+                                        self.msg_m_signal.emit(f"{corpus.title_en}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_en_tag(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                    result.num_list.extend(num_list)
+                                    result.lang_list.extend(lang_list)
+                                    result.sent_list.extend(sent_list)
+                                    idx_num = idx_n
+                                    hit_words = hit_wds
+                                    hit_sents = hit_sts
+                                else:
+                                    if corpus.genre_en in ["governance of china"]:
+                                        for cp in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{cp.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{cp.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts 
+                                    if corpus.genre_en in ["educational philosophy"]:
+                                        for cp in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{cp.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{cp.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for art in corpus.preface.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for art in corpus.chapters.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                    elif len(family.keys())== 2:
+                        corp_root = family['0']
+                        corp_child = family['1']
+                        if corp_root not in ["UXEP", "GOC"]:
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    if corp_child == corp[1]:
+                                        corpus = self.open_dat_file(corp[0])
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}")
                                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                      self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                      self.para_concording_zh_tag(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                                         else:
-                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            self.msg_m_signal.emit(f"{corpus.title_en}")
                                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                      self.para_concording_en_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                      self.para_concording_en_tag(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                                         result.num_list.extend(num_list)
                                         result.lang_list.extend(lang_list)
                                         result.sent_list.extend(sent_list)
                                         idx_num = idx_n
                                         hit_words = hit_wds
                                         hit_sents = hit_sts
-                    self.pbar_signal.emit(f_num,j)                                        
-            if self.scope.value == 3:
-                corpus = self.corpora[0][0]
-                art = self.corpora[0][1]
+                                        break
+                        elif corp_root == "UXEP":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    corpus = self.open_dat_file(corp[0])
+                                    if corp_child == "概况":
+                                        art = corpus.info
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                        break
+                                    if corp_child == "目录":
+                                        art = corpus.contents
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                        break
+                                    if corp_child == "导言":
+                                        for art in corpus.preface.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break
+                                    if corp_child == "章节":
+                                        for art in corpus.chapters.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break
+                                    if corp_child == "附录":
+                                        for art in corpus.annex.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break                                       
+                        elif corp_root == "GOC":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    if corp_child == corp[1]:
+                                        corpus = self.open_dat_file(corp[0])
+                                        for art in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        break                                                
+                        else:
+                            pass                            
+                    elif len(family.keys())== 3:
+                        corp_root = family['0'] 
+                        corp_pa = family['1']   
+                        corp_id = family['2']   
+                        if corp_root == "UXEP":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    corpus = self.open_dat_file(corp[0])
+                                    art_num = corp_id.split("-")[0]
+                                    if corp_pa == "章节":                                        
+                                        for art in corpus.chapters.articles:                                            
+                                            if art.num == art_num:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                                break
+                                    if corp_pa == "附录": 
+                                        for art in corpus.annex.articles:
+                                            if art.num == art_num:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                                break
+                                    break
+                        if corp_root == "GOC":
+                            for corp in new_corpora:
+                                if corp_pa == corp[1]:                                    
+                                    corpus = self.open_dat_file(corp[0])
+                                    if corp_id == "概况":                                        
+                                        art = corpus.info
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                    if corp_id == "目录":
+                                        art = corpus.contents
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                    if corp_id == "主题":
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                    if corp_id == "附录":
+                                        for art in corpus.annex.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                    break
+                    elif len(family.keys())== 4:
+                        corp_root = family['0']   
+                        corp_gpa = family['1']  
+                        corp_pa = family['2']      
+                        corp_id = family['3']      
+                        corp_num = corp_id.split("-")[0]
+                        for corp in new_corpora:
+                            if corp_gpa == corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corp_pa == "主题":
+                                    for theme in corpus.themes:
+                                        if corp_num == theme.num:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                            break
+                                if corp_pa == "附录":
+                                    for art in corpus.annex.articles:
+                                        if art.num == corp_num:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                            break
+                                break                        
+                    elif len(family.keys())== 5:
+                        corp_root = family['0']   
+                        corp_ggpa = family['1']       
+                        corp_gpa = family['2']     
+                        corp_pa = family['3']      
+                        corp_id = family['4']        
+                        theme_num = corp_pa.split("-")[0]
+                        art_num = corp_id.split("-")[0]
+                        for corp in new_corpora:
+                            if corp_ggpa == corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corp_gpa == "主题":
+                                    for theme in corpus.themes:
+                                        if theme_num == theme.num:
+                                            for art in theme.articles:
+                                                if art_num  == art.num:
+                                                    if src_lang == "zh":
+                                                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                                  self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                    else:
+                                                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                                  self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                    result.num_list.extend(num_list)
+                                                    result.lang_list.extend(lang_list)
+                                                    result.sent_list.extend(sent_list)
+                                                    idx_num = idx_n
+                                                    hit_words = hit_wds
+                                                    hit_sents = hit_sts
+                                                    break
+                                        break
+                            break                                    
+                    else:
+                        pass
+                    self.pbar_signal.emit(f_num,j)  
+            if self.scope.value == 3: 
+                self.msg_m_signal.emit(f"1份语料检索中，请稍候....")
+                corpus = self.corpora[0]
+                art = self.corpora[1]
+                ref_corpus = ""
                 f_num = 1
                 if not art:
                     if src_lang == "zh":
                         self.msg_m_signal.emit(f"{corpus.title_zh}")
                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                  self.para_concording_zh_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                  self.para_concording_zh_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                     else:
                         self.msg_m_signal.emit(f"{corpus.title_en}")
                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                  self.para_concording_en_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                  self.para_concording_en_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                     result.num_list.extend(num_list)
                     result.lang_list.extend(lang_list)
                     result.sent_list.extend(sent_list)
@@ -153,72 +698,168 @@ class SrcThread(QThread):
                     hit_words = hit_wds
                     hit_sents = hit_sts
                 else:
-                    if corpus.genre_en in ["educational philosophy"]:
+                    if src_lang == "zh":
+                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                  self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                    else:
+                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                  self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                    result.num_list.extend(num_list)
+                    result.lang_list.extend(lang_list)
+                    result.sent_list.extend(sent_list)
+                    idx_num = idx_n
+                    hit_words = hit_wds
+                    hit_sents = hit_sts
+                self.pbar_signal.emit(f_num,j)
+            if self.scope.value == 4:
+                self.msg_m_signal.emit(f"{j}份语料检索中，请稍候....")
+                for f_num, (corp_path, corp_id) in enumerate(self.corpora, start=1):
+                    corpus = self.open_dat_file(corp_path)
+                    ref_corpus = ""
+                    if corpus.genre_en not in ["educational philosophy", 'governance of china']:
                         if src_lang == "zh":
-                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                            self.msg_m_signal.emit(f"{corpus.title_zh}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                      self.para_concording_zh_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         else:
-                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                            self.msg_m_signal.emit(f"{corpus.title_en}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                      self.para_concording_en_tag(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                        result.num_list.extend(num_list)
+                        result.lang_list.extend(lang_list)
+                        result.sent_list.extend(sent_list)
+                        idx_num = idx_n
+                        hit_words = hit_wds
+                        hit_sents = hit_sts
+                    elif corpus.genre_en in ["educational philosophy"]:
+                        for art in [corpus.info, corpus.contents]:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                             result.num_list.extend(num_list)
                             result.lang_list.extend(lang_list)
                             result.sent_list.extend(sent_list)
                             idx_num = idx_n
                             hit_words = hit_wds
                             hit_sents = hit_sts
-                self.pbar_signal.emit(f_num,j)
-            if self.scope.value == 4:
-                for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
-                    corpus = self.open_dat_file(corp_path)
-                    if corpus.genre_en not in ["educational philosophy"]:
-                        if src_lang == "zh":
-                            self.msg_m_signal.emit(f"{corpus.title_zh}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        else:
-                            self.msg_m_signal.emit(f"{corpus.title_en}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en_tag(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        result.num_list.extend(num_list)
-                        result.lang_list.extend(lang_list)
-                        result.sent_list.extend(sent_list)
-                        idx_num = idx_n
-                        hit_words = hit_wds
-                        hit_sents = hit_sts
-                    else:
-                        if corpus.genre_en in ["educational philosophy"]:
-                            for art in corpus.articles:
+                        for art in corpus.preface.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                        for art in corpus.chapters.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                        for art in corpus.annex.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                    elif corpus.genre_en in ["governance of china"]:
+                        for corp in [corpus.info, corpus.contents]:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en_tag(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts                            
+                        for theme in corpus.themes:
+                            for art in theme.articles:
                                 if src_lang == "zh":
                                     self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_zh_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 else:
                                     self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_en_tag(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 result.num_list.extend(num_list)
                                 result.lang_list.extend(lang_list)
                                 result.sent_list.extend(sent_list)
                                 idx_num = idx_n
                                 hit_words = hit_wds
                                 hit_sents = hit_sts
-                                # endregion
+                        if corpus.annex:
+                            for art in corpus.annex.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en_tag(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts
+                    else: pass
+                    # endregion
                     self.pbar_signal.emit(f_num,j)
         else:
             if self.scope.value == 1:
+                self.msg_m_signal.emit(f"{j}份语料检索中，请稍候....")
                 for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
                     corpus = self.open_dat_file(corp_path)
-                    if corpus.genre_en not in ["educational philosophy"]:
+                    ref_corpus = ""
+                    if corpus.genre_en not in ["educational philosophy", "governance of china"]:
                         if src_lang == "zh":
                             self.msg_m_signal.emit(f"{corpus.title_zh}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_zh(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         else:
                             self.msg_m_signal.emit(f"{corpus.title_en}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_en(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         result.num_list.extend(num_list)
                         result.lang_list.extend(lang_list)
                         result.sent_list.extend(sent_list)
@@ -227,90 +868,633 @@ class SrcThread(QThread):
                         hit_sents = hit_sts
                     else:
                         if corpus.genre_en in ["educational philosophy"]:
-                            for art in corpus.articles:
+                            for corp in [corpus.info, corpus.contents]:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                            
+                            for art in corpus.preface.articles:
                                 if src_lang == "zh":
                                     self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_zh(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 else:
                                     self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_en(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                                
+                            for art in corpus.chapters.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts 
+                            for art in corpus.annex.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 result.num_list.extend(num_list)
                                 result.lang_list.extend(lang_list)
                                 result.sent_list.extend(sent_list)
                                 idx_num = idx_n
                                 hit_words = hit_wds
                                 hit_sents = hit_sts
-                    self.pbar_signal.emit(f_num,j)                                    
-            if self.scope.value == 2:
-                for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
-                    corpus = self.open_dat_file(corp_path)
-                    art_id = corpus_id
-                    if corpus.genre_en not in ["educational philosophy"]:
-                        if src_lang == "zh":
-                            self.msg_m_signal.emit(f"{corpus.title_zh}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        else:
-                            self.msg_m_signal.emit(f"{corpus.title_en}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
-                        result.num_list.extend(num_list)
-                        result.lang_list.extend(lang_list)
-                        result.sent_list.extend(sent_list)
-                        idx_num = idx_n
-                        hit_words = hit_wds
-                        hit_sents = hit_sts
-                    else:
-                        if corpus.genre_en in ["educational philosophy"]:
-                            if art_id in corp_path:
-                                for art in corpus.articles:
+                        if corpus.genre_en in ["governance of china"]:
+                            for corp in [corpus.info, corpus.contents]:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts                            
+                            for theme in corpus.themes:
+                                for art in theme.articles:
                                     if src_lang == "zh":
                                         self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                  self.para_concording_zh(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                  self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                     else:
                                         self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                  self.para_concording_en(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                  self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                     result.num_list.extend(num_list)
                                     result.lang_list.extend(lang_list)
                                     result.sent_list.extend(sent_list)
                                     idx_num = idx_n
                                     hit_words = hit_wds
                                     hit_sents = hit_sts
-                            else:
-                                for art in corpus.articles:
-                                    if art_id == art.title_zh:
+                            if corpus.annex:
+                                for art in corpus.annex.articles:
+                                    if src_lang == "zh":
+                                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                    else:
+                                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                    result.num_list.extend(num_list)
+                                    result.lang_list.extend(lang_list)
+                                    result.sent_list.extend(sent_list)
+                                    idx_num = idx_n
+                                    hit_words = hit_wds
+                                    hit_sents = hit_sts 
+                    self.pbar_signal.emit(f_num,j)
+            if self.scope.value == 2:
+                new_corpora = self.corpora[0]
+                index_list = self.corpora[1]
+                f_num = len(index_list)
+                self.msg_m_signal.emit(f"{f_num}份语料检索中，请稍候....")
+                for family in index_list:
+                    if len(family.keys())== 1:
+                        corp_root = family['0']
+                        for corp in new_corpora:
+                            if corp_root in corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corpus.type_en == "article":
+                                    if src_lang == "zh":
+                                        self.msg_m_signal.emit(f"{corpus.title_zh}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_zh(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                    else:
+                                        self.msg_m_signal.emit(f"{corpus.title_en}")
+                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                  self.para_concording_en(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                    result.num_list.extend(num_list)
+                                    result.lang_list.extend(lang_list)
+                                    result.sent_list.extend(sent_list)
+                                    idx_num = idx_n
+                                    hit_words = hit_wds
+                                    hit_sents = hit_sts
+                                else:
+                                    if corpus.genre_en in ["governance of china"]:
+                                        for cp in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{cp.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{cp.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts 
+                                    if corpus.genre_en in ["educational philosophy"]:
+                                        for cp in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{cp.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{cp.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(cp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for art in corpus.preface.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for art in corpus.chapters.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                    elif len(family.keys())== 2:
+                        corp_root = family['0']
+                        corp_child = family['1']
+                        if corp_root not in ["UXEP", "GOC"]:
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    if corp_child == corp[1]:
+                                        corpus = self.open_dat_file(corp[0])
                                         if src_lang == "zh":
-                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}")
                                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                      self.para_concording_zh(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                      self.para_concording_zh(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                                         else:
-                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            self.msg_m_signal.emit(f"{corpus.title_en}")
                                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                                      self.para_concording_en(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                      self.para_concording_en(corpus, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                                         result.num_list.extend(num_list)
                                         result.lang_list.extend(lang_list)
                                         result.sent_list.extend(sent_list)
                                         idx_num = idx_n
                                         hit_words = hit_wds
                                         hit_sents = hit_sts
-                    self.pbar_signal.emit(f_num,j)                                            
+                                        break
+                        elif corp_root == "UXEP":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    corpus = self.open_dat_file(corp[0])
+                                    if corp_child == "概况":
+                                        art = corpus.info
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                        break
+                                    if corp_child == "目录":
+                                        art = corpus.contents
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                        break
+                                    if corp_child == "导言":
+                                        for art in corpus.preface.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break
+                                    if corp_child == "章节":
+                                        for art in corpus.chapters.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break
+                                    if corp_child == "附录":
+                                        for art in corpus.annex.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        break                                       
+                        elif corp_root == "GOC":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    if corp_child == corp[1]:
+                                        corpus = self.open_dat_file(corp[0])
+                                        for art in [corpus.info, corpus.contents]:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        if corpus.annex:
+                                            for art in corpus.annex.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                        break                                                
+                        else:
+                            pass                            
+                    elif len(family.keys())== 3:
+                        corp_root = family['0'] 
+                        corp_pa = family['1']  
+                        corp_id = family['2']  
+                        if corp_root == "UXEP":
+                            for corp in new_corpora:
+                                if corp_root in corp[1]:
+                                    corpus = self.open_dat_file(corp[0])
+                                    art_num = corp_id.split("-")[0]
+                                    if corp_pa == "章节":                                        
+                                        for art in corpus.chapters.articles:                                            
+                                            if art.num == art_num:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                                break
+                                    if corp_pa == "附录": 
+                                        for art in corpus.annex.articles:
+                                            if art.num == art_num:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                                break
+                                    break
+                        if corp_root == "GOC":
+                            for corp in new_corpora:
+                                if corp_pa == corp[1]:                                    
+                                    corpus = self.open_dat_file(corp[0])
+                                    if corp_id == "概况":                                        
+                                        art = corpus.info
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                    if corp_id == "目录":
+                                        art = corpus.contents
+                                        if src_lang == "zh":
+                                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        else:
+                                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                      self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                        result.num_list.extend(num_list)
+                                        result.lang_list.extend(lang_list)
+                                        result.sent_list.extend(sent_list)
+                                        idx_num = idx_n
+                                        hit_words = hit_wds
+                                        hit_sents = hit_sts
+                                    if corp_id == "主题":
+                                        for theme in corpus.themes:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                    if corp_id == "附录":
+                                        for art in corpus.annex.articles:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                    break
+                    elif len(family.keys())== 4:
+                        corp_root = family['0'] 
+                        corp_gpa = family['1']  
+                        corp_pa = family['2']       
+                        corp_id = family['3']        
+                        corp_num = corp_id.split("-")[0]
+                        for corp in new_corpora:
+                            if corp_gpa == corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corp_pa == "主题":
+                                    for theme in corpus.themes:
+                                        if corp_num == theme.num:
+                                            for art in theme.articles:
+                                                if src_lang == "zh":
+                                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                else:
+                                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                result.num_list.extend(num_list)
+                                                result.lang_list.extend(lang_list)
+                                                result.sent_list.extend(sent_list)
+                                                idx_num = idx_n
+                                                hit_words = hit_wds
+                                                hit_sents = hit_sts
+                                            break
+                                if corp_pa == "附录":
+                                    for art in corpus.annex.articles:
+                                        if art.num == corp_num:
+                                            if src_lang == "zh":
+                                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            else:
+                                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                            result.num_list.extend(num_list)
+                                            result.lang_list.extend(lang_list)
+                                            result.sent_list.extend(sent_list)
+                                            idx_num = idx_n
+                                            hit_words = hit_wds
+                                            hit_sents = hit_sts
+                                            break
+                                break                        
+                    elif len(family.keys())== 5:
+                        corp_root = family['0']  
+                        corp_ggpa = family['1']        
+                        corp_gpa = family['2']       
+                        corp_pa = family['3']      
+                        corp_id = family['4']     
+                        theme_num = corp_pa.split("-")[0]
+                        art_num = corp_id.split("-")[0]
+                        for corp in new_corpora:
+                            if corp_ggpa == corp[1]:
+                                corpus = self.open_dat_file(corp[0])
+                                if corp_gpa == "主题":
+                                    for theme in corpus.themes:
+                                        if theme_num == theme.num:
+                                            for art in theme.articles:
+                                                if art_num  == art.num:
+                                                    if src_lang == "zh":
+                                                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                                  self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                    else:
+                                                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                                                  self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                                    result.num_list.extend(num_list)
+                                                    result.lang_list.extend(lang_list)
+                                                    result.sent_list.extend(sent_list)
+                                                    idx_num = idx_n
+                                                    hit_words = hit_wds
+                                                    hit_sents = hit_sts
+                                                    break
+                                        break
+                            break                                    
+                    else:
+                        pass
+                    self.pbar_signal.emit(f_num,j)                                        
             if self.scope.value == 3:
-                corpus = self.corpora[0][0]
-                art = self.corpora[0][1]
+                self.msg_m_signal.emit(f"1份语料检索中，请稍候....")
+                corpus = self.corpora[0]
+                art = self.corpora[1]
+                ref_corpus = ""
                 f_num = 1
                 if not art:
                     if src_lang == "zh":
                         self.msg_m_signal.emit(f"{corpus.title_zh}")
                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                  self.para_concording_zh(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                  self.para_concording_zh(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                     else:
                         self.msg_m_signal.emit(f"{corpus.title_en}")
                         num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                  self.para_concording_en(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                  self.para_concording_en(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                     result.num_list.extend(num_list)
                     result.lang_list.extend(lang_list)
                     result.sent_list.extend(sent_list)
@@ -318,59 +1502,154 @@ class SrcThread(QThread):
                     hit_words = hit_wds
                     hit_sents = hit_sts
                 else:
-                    if corpus.genre_en in ["educational philosophy"]:
-                        if src_lang == "zh":
-                            self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
-                        else:
-                            self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
-                            num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
-                        result.num_list.extend(num_list)
-                        result.lang_list.extend(lang_list)
-                        result.sent_list.extend(sent_list)
-                        idx_num = idx_n
-                        hit_words = hit_wds
-                        hit_sents = hit_sts
-                self.pbar_signal.emit(f_num,j) 
+                    if src_lang == "zh":
+                        self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                  self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                    else:
+                        self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                        num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                  self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                    result.num_list.extend(num_list)
+                    result.lang_list.extend(lang_list)
+                    result.sent_list.extend(sent_list)
+                    idx_num = idx_n
+                    hit_words = hit_wds
+                    hit_sents = hit_sts
+                self.pbar_signal.emit(f_num,j)
             if self.scope.value == 4:
-                for f_num, (corp_path, corpus_id) in enumerate(self.corpora, start=1):
+                self.msg_m_signal.emit(f"{j}份语料检索中，请稍候....")
+                for f_num, (corp_path, corp_id) in enumerate(self.corpora, start=1):
                     corpus = self.open_dat_file(corp_path)
-                    if corpus.genre_en not in ["educational philosophy"]:
+                    ref_corpus = ""
+                    if corpus.genre_en not in ["educational philosophy", 'governance of china']:
                         if src_lang == "zh":
                             self.msg_m_signal.emit(f"{corpus.title_zh}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_zh(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_zh(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         else:
                             self.msg_m_signal.emit(f"{corpus.title_en}")
                             num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                      self.para_concording_en(corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
+                                      self.para_concording_en(corpus, ref_corpus, self.req, query, query_2, idx_num, hit_sents, hit_words)
                         result.num_list.extend(num_list)
                         result.lang_list.extend(lang_list)
                         result.sent_list.extend(sent_list)
                         idx_num = idx_n
                         hit_words = hit_wds
                         hit_sents = hit_sts
-                    else:
-                        if corpus.genre_en in ["educational philosophy"]:
-                            for art in corpus.articles:
+                    elif corpus.genre_en in ["educational philosophy"]:
+                        for art in [corpus.info, corpus.contents]:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                        for art in corpus.preface.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                        for art in corpus.chapters.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                        for art in corpus.annex.articles:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts
+                    elif corpus.genre_en in ["governance of china"]:
+                        for corp in [corpus.info, corpus.contents]:
+                            if src_lang == "zh":
+                                self.msg_m_signal.emit(f"{corpus.title_zh}-{corp.title_zh}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_zh(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            else:
+                                self.msg_m_signal.emit(f"{corpus.title_en}-{corp.title_en}")
+                                num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                          self.para_concording_en(corp, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                            result.num_list.extend(num_list)
+                            result.lang_list.extend(lang_list)
+                            result.sent_list.extend(sent_list)
+                            idx_num = idx_n
+                            hit_words = hit_wds
+                            hit_sents = hit_sts                            
+                        for theme in corpus.themes:
+                            for art in theme.articles:
                                 if src_lang == "zh":
                                     self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_zh(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 else:
                                     self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
                                     num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
-                                              self.para_concording_en(art, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
                                 result.num_list.extend(num_list)
                                 result.lang_list.extend(lang_list)
                                 result.sent_list.extend(sent_list)
                                 idx_num = idx_n
                                 hit_words = hit_wds
                                 hit_sents = hit_sts
-                                # endregion
+                        if corpus.annex:
+                            for art in corpus.annex.articles:
+                                if src_lang == "zh":
+                                    self.msg_m_signal.emit(f"{corpus.title_zh}-{art.title_zh}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_zh(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                else:
+                                    self.msg_m_signal.emit(f"{corpus.title_en}-{art.title_en}")
+                                    num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n = \
+                                              self.para_concording_en(art, corpus, self.req, query, query_2, idx_num, hit_sents, hit_words, "book")
+                                result.num_list.extend(num_list)
+                                result.lang_list.extend(lang_list)
+                                result.sent_list.extend(sent_list)
+                                idx_num = idx_n
+                                hit_words = hit_wds
+                                hit_sents = hit_sts
+                    else: pass
+                    # endregion
                     self.pbar_signal.emit(f_num,j)
+
         result.hit_words = hit_words
         result.hit_pairs = hit_sents
         result_dict = {}
@@ -408,7 +1687,7 @@ class SrcThread(QThread):
         if mode == SearchMode.NORMAL:
             result = q.q
             if q.q_tl:
-                result_tl = re.compile(r'\b(' + "|"+ "|".join(q.q_tl) + r')\b') # OK
+                result_tl = re.compile(r'\b(' + "|"+ "|".join(q.q_tl) + r')\b')
         if mode == SearchMode.REGEX:
             result = re.compile(r"{}".format(q.q))            
         if mode == SearchMode.EXTENDED:
@@ -475,40 +1754,52 @@ class SrcThread(QThread):
             if mode == 3:
                 note_regex = re.compile(r"(\[\d+\]_XZ|\[[a-z]\]_XZ|\*_SYM)")
                 try:
-                    corp = note_corpus.notes_en
+                    corp = note_corpus.notes.notes_en
                 except:
                     try:
-                        corp = note_corpus.note_en
+                        corp = note_corpus.notes_en
                     except:
-                        corp = ""
+                        try:
+                            corp = note_corpus.note_en
+                        except:
+                            corp = ""
             else:
                 note_regex = re.compile(r"(\[\d+\]|\[[a-z]\]|\*)")
                 try:
-                    corp = note_corpus.notes_en
+                    corp = note_corpus.notes.notes_en
                 except:
                     try:
-                        corp = note_corpus.note_en
+                        corp = note_corpus.notes_en
                     except:
-                        corp = ""
+                        try:
+                            corp = note_corpus.note_en
+                        except:
+                            corp = ""
         else:
             if mode == 3:
-                note_regex = re.compile(r"(〔\d+〕/xx|〔[a-z]〕/xz|\*/w)")
+                note_regex = re.compile(r"(〔\d+〕/xz|〔[a-z]〕/xz|\*/w)")
                 try:
-                    corp = note_corpus.notes_zh
+                    corp = note_corpus.notes.notes_zh
                 except:
                     try:
-                        corp = note_corpus.note_zh
+                        corp = note_corpus.notes_zh
                     except:
-                        corp = ""
+                        try:
+                            corp = note_corpus.note_zh
+                        except:
+                            corp = ""
             else:
                 note_regex = re.compile(r"(〔\d+〕|〔[a-z]〕|\*)")
                 try:
-                    corp = note_corpus.notes_zh
+                    corp = note_corpus.notes.notes_zh
                 except:
                     try:
-                        corp = note_corpus.note_zh
+                        corp = note_corpus.notes_zh
                     except:
-                        corp = ""
+                        try:
+                            corp = note_corpus.note_zh
+                        except:
+                            corp = ""
         m = re.finditer(note_regex, sent)
         if m and corp:            
             for note_id in m:
@@ -521,7 +1812,7 @@ class SrcThread(QThread):
                             notes.append(note.index + " " +note.note)
         return notes
 
-    def get_extra (self, idx_num, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, note_corpus, corpus, title_zh, title_en, lang, genre="article"):
+    def get_extra (self, idx_num, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, note_corpus, corpus, ref_corpus, title_zh, title_en, lang, genre="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -540,12 +1831,15 @@ class SrcThread(QThread):
                 en_set = en_set.replace("[PS]", "<br>")
                 if req.dsp_sc:
                     if genre == "book":
-                        if corpus.genre_en != "governance of china":
-                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"                                      
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                      
+                            else:
+                                sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
                         else:
-                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_zh)+re.sub(r"\[[A-Z]+?\]", "", corpus.edition_id_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>" 
+                            print("error: no ref_corpus!")
                     else:
-                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh)+ "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                     sent_list.append(zh_set+sc_sl)
                     if req.dsp_nt:
                         if notes_zh:
@@ -553,12 +1847,15 @@ class SrcThread(QThread):
                             lang_list.append("原注")
                             sent_list.append("<br>".join(notes_zh))
                     if genre == "book":
-                        if corpus.genre_en != "governance of china":
-                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", corpus.title_en.title()) + " from "+ corpus.genre_en.title() + "</font>"
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                            else:
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
                         else:
-                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " from "+ corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_en)+ ")</font>"  
+                            print("error: no ref_corpus!")
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) +" (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                     num_list.append(idx_num)
                     lang_list.append("译文")
                     sent_list.append(en_set+sc_tl)
@@ -584,12 +1881,15 @@ class SrcThread(QThread):
                             sent_list.append("<br>".join(notes_en))
             elif req.dsp_sc:
                 if genre == "book":
-                    if corpus.genre_en != "governance of china":
-                        sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"                                       
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                      
+                        else:
+                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"                      
                     else:
-                        sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_zh)+re.sub(r"\[[A-Z]+?\]", "", corpus.edition_id_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>" 
+                        print("error: no ref_corpus!") 
                 else:
-                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh)+ "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                 if hi_sent_2:
                     sent_list.append(hi_sent_2+sc_sl)
                 else:
@@ -600,12 +1900,15 @@ class SrcThread(QThread):
                         lang_list.append("原注")
                         sent_list.append("<br>".join(notes_zh))
                 if genre == "book":
-                    if corpus.genre_en != "governance of china":
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", corpus.title_en.title()) + " from "+ corpus.genre_en.title() + "</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                        else:
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " from "+ corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_en)+ ")</font>"    
+                        print("error: no ref_corpus!")
                 else:
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                 num_list.append(idx_num)
                 lang_list.append("译文")
                 sent_list.append(hi_sent+sc_tl)
@@ -643,14 +1946,17 @@ class SrcThread(QThread):
                 zh_set = zh_set.replace("[PS]", "<br>")
                 en_set = " ".join(sents_en)
                 en_set = en_set.replace("[PS]", "<br>")
-                if req.dsp_sc:
+                if req.dsp_sc:                    
                     if genre == "book":
-                        if corpus.genre_en != "governance of china":
-                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"                                     
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                     
+                            else:
+                                sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
                         else:
-                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_zh)+re.sub(r"\[[A-Z]+?\]", "", corpus.edition_id_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>" 
+                            print("error: no ref_corpus!")
                     else:
-                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh)+ "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                     sent_list.append(zh_set+sc_sl)
                     if req.dsp_nt:
                         if notes_zh:
@@ -658,12 +1964,15 @@ class SrcThread(QThread):
                             lang_list.append("原注")
                             sent_list.append("<br>".join(notes_zh))
                     if genre == "book":
-                        if corpus.genre_en != "governance of china":
-                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", corpus.title_en.title()) + " from "+ corpus.genre_en.title() + "</font>"
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                            else:
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
                         else:
-                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " from "+ corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_en)+ ")</font>"    
+                            print("error: no ref_corpus!")
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                     num_list.append(idx_num)
                     lang_list.append("译文")
                     sent_list.append(en_set+sc_tl)
@@ -689,10 +1998,13 @@ class SrcThread(QThread):
                             sent_list.append("<br>".join(notes_en))
             elif req.dsp_sc:
                 if genre == "book":
-                    if corpus.genre_en != "governance of china":
-                        sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"                                        
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                        
+                        else:
+                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
                     else:
-                        sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_zh)+re.sub(r"\[[A-Z]+?\]", "", corpus.edition_id_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"  
+                        print("error: no ref_corpus!")
                 else:
                     sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                 sent_list.append(hi_sent+sc_sl)
@@ -702,12 +2014,15 @@ class SrcThread(QThread):
                         lang_list.append("原注")
                         sent_list.append("<br>".join(notes_zh))
                 if genre == "book":
-                    if corpus.genre_en != "governance of china":
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", corpus.title_en.title()) + " from "+ corpus.genre_en.title() + "</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                        else:
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " from "+ corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.volume_id_en)+ ")</font>"      
+                        print("error: no ref_corpus!")
                 else:
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                 num_list.append(idx_num)
                 lang_list.append("译文")
                 if hi_sent_2:
@@ -740,7 +2055,7 @@ class SrcThread(QThread):
             
         return num_list, lang_list, sent_list
 
-    def get_tag_extra (self, idx_num, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, title_zh, title_en, lang, genre="article"):
+    def get_tag_extra (self, idx_num, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, ref_corpus, title_zh, title_en, lang, genre="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -758,11 +2073,16 @@ class SrcThread(QThread):
                 en_set = " ".join(sents_en_tag)
                 en_set = en_set.replace("[PS]", "<br>")
                 if req.dsp_sc:
-                    if genre == "book":
-                        sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"                                       
+                    if genre == "book":                        
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                        
+                            else:
+                                sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
+                        else:
+                            print("error: no ref_corpus!")                                     
                     else:
-                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + \
-                                "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                        sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                     sent_list.append(zh_set+sc_sl)
                     if req.dsp_nt:
                         if notes_zh:
@@ -770,12 +2090,15 @@ class SrcThread(QThread):
                             lang_list.append("原注")
                             sent_list.append("<br>".join(notes_zh))
                     if genre == "book":
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) +\
-                                " from " + corpus.genre_en.title()  + "</font>"
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                            else:
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
+                        else:
+                            print("error: no ref_corpus!")
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) \
-                                + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en) + ") Genre: " + \
-                                re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en) + ") Genre: " +re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                     num_list.append(idx_num)
                     lang_list.append("译文")
                     sent_list.append(en_set+sc_tl)
@@ -801,10 +2124,15 @@ class SrcThread(QThread):
                             sent_list.append("<br>".join(notes_en))
             elif req.dsp_sc:
                 if genre == "book":
-                    sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                        
+                        else:
+                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
+                    else:
+                        print("error: no ref_corpus!") 
                 else:
-                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) \
-                            + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh)+ "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                 if hi_sent_2:
                     sent_list.append(hi_sent_2+sc_sl)
                 else:
@@ -815,12 +2143,15 @@ class SrcThread(QThread):
                         lang_list.append("原注")
                         sent_list.append("<br>".join(notes_zh))
                 if genre == "book":
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                            " from "+ corpus.genre_en.title() + "</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                        else:
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
+                    else:
+                        print("error: no ref_corpus!")
                 else:
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                            " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + \
-                            re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                 num_list.append(idx_num)
                 lang_list.append("译文")
                 sent_list.append(hi_sent+sc_tl)
@@ -861,7 +2192,13 @@ class SrcThread(QThread):
                 en_set = en_set.replace("[PS]", "<br>")
                 if req.dsp_sc:
                     if genre == "book":
-                        sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "•" + corpus.title_zh +"》</font>"
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                        
+                            else:
+                                sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
+                        else:
+                            print("error: no ref_corpus!") 
                     else:
                         sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                     sent_list.append(zh_set+sc_sl)
@@ -871,12 +2208,15 @@ class SrcThread(QThread):
                             lang_list.append("原注")
                             sent_list.append("<br>".join(notes_zh))
                     if genre == "book":
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                                " from "+ corpus.genre_en.title() + "</font>"
+                        if ref_corpus:
+                            if ref_corpus.genre_en != "governance of china":
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                            else:
+                                sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
+                        else:
+                            print("error: no ref_corpus!")
                     else:
-                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                                " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title()) \
-                                + "</font>"
+                        sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())+ "</font>"
                     num_list.append(idx_num)
                     lang_list.append("译文")
                     sent_list.append(en_set+sc_tl)
@@ -902,11 +2242,15 @@ class SrcThread(QThread):
                             sent_list.append("<br>".join(notes_en))
             elif req.dsp_sc:
                 if genre == "book":
-                    sc_sl = "<br><font color = 'grey'>语源："+  "《"+re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) \
-                            + "•" + corpus.title_zh +"》</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_sl = "<br><font color = 'grey'>语源：《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.genre_zh)+ "•" + title_zh +"》</font>"                                        
+                        else:
+                            sc_sl = "<br><font color = 'grey'>语源："+ "《"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.title_zh) + "》，"+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_zh)+re.sub(r"\[[A-Z]+?\]", "", ref_corpus.edition_zh)+"，"+re.sub(r"\[[A-Z]+?\]", "", title_zh) +"</font>"
+                    else:
+                        print("error: no ref_corpus!") 
                 else:
-                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh) \
-                            + "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
+                    sc_sl = "<br><font color = 'grey'>语源："+ re.sub(r"\[[A-Z]+?\]", "", corpus.genre_zh)+ "，《"+re.sub(r"\[[A-Z]+?\]", "", title_zh) + "》，" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_zh)  + "</font>"                                        
                 sent_list.append(hi_sent+sc_sl)
                 if req.dsp_nt:
                     if notes_zh:
@@ -914,12 +2258,15 @@ class SrcThread(QThread):
                         lang_list.append("原注")
                         sent_list.append("<br>".join(notes_zh))
                 if genre == "book":
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                            " from "+ corpus.genre_en.title() + "</font>"
+                    if ref_corpus:
+                        if ref_corpus.genre_en != "governance of china":
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.genre_en.title() + "</font>"
+                        else:
+                            sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en)+ " from "+ ref_corpus.title_en.title()+ " (" + re.sub(r"\[[A-Z]+?\]", "", ref_corpus.volume_en)+ ")</font>"
+                    else:
+                        print("error: no ref_corpus!")
                 else:
-                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en.title()) + \
-                            " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + \
-                            re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
+                    sc_tl = "<br> <font color = 'grey'>SOURCE: " + re.sub(r"\[[A-Z]+?\]", "", title_en) + " (" + re.sub(r"\[[A-Z]+?\]", "", corpus.date_en)+ ") Genre: " + re.sub(r"\[[A-Z]+?\]", "", corpus.genre_en.title())  + "</font>"
                 num_list.append(idx_num)
                 lang_list.append("译文")
                 if hi_sent_2:
@@ -952,7 +2299,7 @@ class SrcThread(QThread):
             
         return num_list, lang_list, sent_list    
 
-    def para_concording_zh(self, corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
+    def para_concording_zh(self, corpus, ref_corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -980,14 +2327,14 @@ class SrcThread(QThread):
                         m_2 = re.findall(query_2, sent.en)
                         if m_2:
                             hi_sent_2 = re.sub(query_2, "<font color = 'blue'><b>"+r"\g<0>"+"</b></font>", sent.en)
-                    n_l, l_l, s_l = self.get_extra(idx_n, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, corpus, corpus, corpus.title_zh, corpus.title_en, "zh", type)
+                    n_l, l_l, s_l = self.get_extra(idx_n, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, corpus, corpus, ref_corpus, corpus.title_zh, corpus.title_en, "zh", type)
                     num_list.extend(n_l)
                     lang_list.extend(l_l)
                     sent_list.extend(s_l)
                     idx_n += 1
         return num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n
 
-    def para_concording_en(self, corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
+    def para_concording_en(self, corpus, ref_corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -1015,14 +2362,14 @@ class SrcThread(QThread):
                         m_2 = re.findall(query_2, sent.zh)
                         if m_2:
                             hi_sent_2 = re.sub(query_2, "<font color = 'blue'><b>"+r"\g<0>"+"</b></font>", sent.zh)
-                    n_l, l_l, s_l = self.get_extra(idx_n, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, corpus, corpus, corpus.title_zh, corpus.title_en, "en", type)
+                    n_l, l_l, s_l = self.get_extra(idx_n, req, sent, sents_zh, sents_en, hi_sent, hi_sent_2, corpus, corpus, ref_corpus, corpus.title_zh, corpus.title_en, "en", type)
                     num_list.extend(n_l)
                     lang_list.extend(l_l)
                     sent_list.extend(s_l)
                     idx_n += 1
         return num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n    
 
-    def para_concording_zh_tag(self, corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
+    def para_concording_zh_tag(self, corpus, ref_corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -1050,14 +2397,14 @@ class SrcThread(QThread):
                         m_2 = re.findall(query_2, sent.en_tag)
                         if m_2:
                             hi_sent_2 = re.sub(query_2, "<font color = 'blue'><b>"+r"\g<0>"+"</b></font>", sent.en_tag)
-                    n_l, l_l, s_l = self.get_tag_extra(idx_n, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, corpus.title_zh, corpus.title_en, "zh", type)
+                    n_l, l_l, s_l = self.get_tag_extra(idx_n, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, ref_corpus, corpus.title_zh, corpus.title_en, "zh", type)
                     num_list.extend(n_l)
                     lang_list.extend(l_l)
                     sent_list.extend(s_l)
                     idx_n += 1
         return num_list, lang_list, sent_list, hit_sts, hit_wds, idx_n
 
-    def para_concording_en_tag(self, corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
+    def para_concording_en_tag(self, corpus, ref_corpus, req, query, query_2, idx_num, hit_sents, hit_words, type="article"):
         num_list = []
         lang_list = []
         sent_list = []
@@ -1085,7 +2432,7 @@ class SrcThread(QThread):
                         m_2 = re.findall(query_2, sent.zh_tag)
                         if m_2:
                             hi_sent_2 = re.sub(query_2, "<font color = 'blue'><b>"+r"\g<0>"+"</b></font>", sent.zh_tag)
-                    n_l, l_l, s_l = self.get_tag_extra(idx_n, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, corpus.title_zh, corpus.title_en, "en", type)
+                    n_l, l_l, s_l = self.get_tag_extra(idx_n, req, sent, sents_zh_tag, sents_en_tag, hi_sent, hi_sent_2, corpus, ref_corpus, corpus.title_zh, corpus.title_en, "en", type)
                     num_list.extend(n_l)
                     lang_list.extend(l_l)
                     sent_list.extend(s_l)
