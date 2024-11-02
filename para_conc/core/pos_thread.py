@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# Thread for presenting word freqency list
 # Copyright (c) 2024 Tony Chang (42716403@qq.com)
 
 import os, sys, json, re, time, copy
@@ -32,9 +33,9 @@ class TagThread(QThread):
         self.outdicts_en = en_dt
         self.merged_dict_zh = {}
         self.merged_dict_en = {}
-        self.stop_zh = stp_zh
-        self.stop_en = stp_en
-        self.filters = opt
+        self.stop_zh = stp_zh 
+        self.stop_en = stp_en 
+        self.filters = opt    
         self.word_tag_list = []
         self.word_list = []
         self.lang = lang
@@ -50,31 +51,31 @@ class TagThread(QThread):
         return self.puncs
     
     def output_dict_merger(self, output_dict_list):
-        output_dict = defaultdict(list) 
+        output_dict = defaultdict(list)
         merged_dict = defaultdict(list) 
-        for ipd in output_dict_list:                    
-            for key, values in ipd.items():           
-                n_key = key[0]                         
-                if n_key not in merged_dict.keys():     
+        for ipd in output_dict_list:                     
+            for key, values in ipd.items():             
+                n_key = key[0]                          
+                if n_key not in merged_dict.keys():    
                     merged_dict[n_key]=values
                 else:                                  
                     md_dict = {}                        
                     for (m,d,q) in merged_dict[n_key]:  
-                        if (m,d) not in md_dict.keys():
-                            md_dict[(m,d)]=q          
+                        if (m,d) not in md_dict.keys(): 
+                            md_dict[(m,d)]=q             
                         else:
-                            md_dict[(m,d)]+=q          
-                    for (w,t,q) in values:             
+                            md_dict[(m,d)]+=q            
+                    for (w,t,q) in values:              
                         if (w,t) not in md_dict.keys():
-                            md_dict[(w,t)]=q            
+                            md_dict[(w,t)]=q             
                         else:
-                            md_dict[(w,t)]+=q          
+                            md_dict[(w,t)]+=q            
                     new_values = [(k,t,q) for (k,t),q in md_dict.items()] 
                     merged_dict[n_key]=new_values                         
-        for k, v_list in merged_dict.items():   
-            tn = sum([q for (w,t,q) in v_list])        
+        for k, v_list in merged_dict.items():         
+            tn = sum([q for (w,t,q) in v_list])       
             output_dict[(k,tn)]=v_list                 
-        return output_dict                            
+        return output_dict                              
 
     def item_remover(self, input_dict, target="punc"):
         output_dict = copy.deepcopy(input_dict)
@@ -189,7 +190,7 @@ class TagThread(QThread):
                 self.pbar_signal.emit(5,10)
                 self.msg_m_signal.emit("正在转换中文词频列表格式，请稍候....")
                 word_tag_result_list =[]
-                if final_zh_dict:
+                if final_zh_dict: 
                     nm_list_zh, hw_list_zh, hq_list_zh, tq_list_zh = self.result_list_generator(final_zh_dict, "zh")
                     self.pbar_signal.emit(6,10) 
                     result_pd_zh = self._converter.lst2pd(nm_list_zh, hw_list_zh, hq_list_zh, tq_list_zh)
@@ -282,4 +283,4 @@ class TagThread(QThread):
                     self.pbar_signal.emit(10,10)
                     self.msg_m_signal.emit(f"抱歉，准备工作出错，请联系软件维护人员，本次共用时{time_used:.2f}秒")              
             time.sleep(1)
-            self.pbar_signal.emit(-1,10)   
+            self.pbar_signal.emit(-1,10)
